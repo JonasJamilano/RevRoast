@@ -12,7 +12,7 @@ body {
 
 header {
     background: #111;
-    padding: 1rem 2rem;
+    padding: 0.1rem 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -31,7 +31,7 @@ header {
 nav ul {
     display: flex;
     list-style: none;
-    gap: 1.2rem;
+    gap: 1rem;
     align-items: center;
     padding-left: 0;
     margin: 0;
@@ -63,7 +63,7 @@ nav a:hover {
 }
 
 .hero {
-    padding: 5rem 2rem 6rem 2rem; /* Add more padding at the bottom */
+    padding: 5rem 2rem 6rem 2rem; 
     text-align: center;
     background: url('https://images.pexels.com/photos/29406740/pexels-photo-29406740.jpeg?cs=srgb&dl=pexels-jonathanborba-29406740.jpg&fm=jpg') center/cover no-repeat;
     color: #eaeaf8;
@@ -207,6 +207,56 @@ nav a:hover {
 
 .logo a:hover {
     color: #ff6b3d;
+}
+
+.profile-icon {
+    width: 36px;          
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;    
+    display: block;        
+  }
+  
+.profile-icon:hover {
+    transform: scale(1.05);
+}
+  
+
+/* Dropdown Container */
+.dropdown {
+    position: relative;
+    display: inline-block;
+}
+  
+/* Hide dropdown by default */
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #fff5ef;
+    min-width: 120px;
+    box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.15);
+    z-index: 10;
+    border-radius: 10px;
+    overflow: hidden;
+}
+  
+/* Dropdown links */
+.dropdown-content a {
+    color: #333;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    display: block;
+    font-size: 0.95rem;
+}
+
+.dropdown-content a:hover {
+    background-color: #ffe0d6;
+}
+  
+/* Show dropdown on hover */
+.dropdown:hover .dropdown-content {
+    display: block;
 }
 
 footer {
