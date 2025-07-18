@@ -198,6 +198,17 @@ nav a:hover {
     background: #2c2c2c;
 }
 
+.logo a {
+    text-decoration: none;
+    color: #fc4011;
+    font-weight: bold;
+    font-size: 1.5rem;
+}
+
+.logo a:hover {
+    color: #ff6b3d;
+}
+
 footer {
     text-align: center;
     padding: 1rem;
