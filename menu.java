@@ -9,11 +9,11 @@ public class menu extends JFrame {
         setLocationRelativeTo(null);
 
         JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(new Color(50, 50, 50)); // beige
+        mainPanel.setBackground(new Color(50, 50, 50)); 
 
         JLabel title = new JLabel("Menu", SwingConstants.CENTER);
         title.setFont(new Font("Serif", Font.BOLD, 36));
-        title.setForeground(new Color(153, 61, 61)); // dark red
+        title.setForeground(new Color(153, 61, 61)); 
         title.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
         mainPanel.add(title, BorderLayout.NORTH);
 
@@ -39,7 +39,7 @@ public class menu extends JFrame {
 
         backBtn.addActionListener(e -> {
             dispose();
-            new home(); // assuming home.java is working as JFrame
+            new home(); 
         });
 
         JPanel footerPanel = new JPanel();

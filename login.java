@@ -7,7 +7,7 @@ public class login extends JFrame {
         setTitle("Rev & Roast - Login");
         setSize(400, 300);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // center window
+        setLocationRelativeTo(null); 
 
         // Main panel
         JPanel panel = new JPanel();

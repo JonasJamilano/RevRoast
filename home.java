@@ -1,5 +1,4 @@
 import java.awt.*;
-import java.awt.event.*;
 import javax.swing.*;
 
 public class home extends JFrame {
@@ -10,40 +9,25 @@ public class home extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg");
-        mainPanel.setBackground(new Color(50, 50, 50));
+        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg"); 
         mainPanel.setLayout(new BorderLayout());
 
         JLabel title = new JLabel("Rev & Roast", SwingConstants.CENTER);
         title.setFont(new Font("Serif", Font.BOLD, 36));
-        title.setForeground(new Color(252, 65, 17));
+        title.setForeground(new Color(252, 65, 17)); 
         title.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         mainPanel.add(title, BorderLayout.NORTH);
 
-        // Panel for vertical buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 300, 50, 300)); // padding
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 300, 50, 300)); 
 
-        JButton browseBtn = new JButton("Browse Menu");
-        JButton cartBtn = new JButton("View Cart");
-        JButton loginBtn = new JButton("Login");
-        JButton registerBtn = new JButton("Register");
+        JButton browseBtn = createStyledButton("Browse Menu");
+        JButton cartBtn = createStyledButton("View Cart");
+        JButton loginBtn = createStyledButton("Login");
+        JButton registerBtn = createStyledButton("Register");
 
-        Dimension buttonSize = new Dimension(200, 40);
-        browseBtn.setMaximumSize(buttonSize);
-        cartBtn.setMaximumSize(buttonSize);
-        loginBtn.setMaximumSize(buttonSize);
-        registerBtn.setMaximumSize(buttonSize);
-
-        // Center text
-        browseBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        cartBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        loginBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        registerBtn.setAlignmentX(Component.CENTER_ALIGNMENT);
-
-        // Add spacing between buttons
         buttonPanel.add(browseBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         buttonPanel.add(cartBtn);
@@ -61,45 +45,48 @@ public class home extends JFrame {
 
         add(mainPanel);
 
-        // Event listeners
-        loginBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new login();
-                dispose();
-            }
+        // Event Listeners
+        loginBtn.addActionListener(e -> {
+            new login();
+            dispose();
         });
 
-        registerBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new register();
-                dispose();
-            }
+        registerBtn.addActionListener(e -> {
+            new register();
+            dispose();
         });
 
-        browseBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new menu();
-                dispose();
-            }
+        browseBtn.addActionListener(e -> {
+            new menu();
+            dispose();
         });
 
-        cartBtn.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                new cart();
-                dispose();
-            }
+        cartBtn.addActionListener(e -> {
+            new cart();
+            dispose();
         });
 
         setVisible(true);
     }
 
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text);
+        btn.setAlignmentX(Component.CENTER_ALIGNMENT);
+        btn.setMaximumSize(new Dimension(200, 40));
+        btn.setBackground(new Color(255, 87, 34)); 
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        return btn;
+    }
+
     class BackgroundPanel extends JPanel {
         private Image backgroundImage;
-    
+
         public BackgroundPanel(String fileName) {
             backgroundImage = new ImageIcon(fileName).getImage();
         }
-    
+
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
