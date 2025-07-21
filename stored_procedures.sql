@@ -116,6 +116,7 @@ END$$
 CREATE PROCEDURE process_payment(
     IN p_order_id INT,
     IN p_payment_method VARCHAR(50)
+)
 BEGIN
     DECLARE v_order_status VARCHAR(20);
     DECLARE v_total DECIMAL(10,2);
