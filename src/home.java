@@ -1,27 +1,37 @@
 import java.awt.*;
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 
 public class home extends JFrame {
 
     public home() {
+        // Force cross-platform look and feel to respect button colors
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
         setTitle("Rev & Roast - Home");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg"); 
+        // Load background panel
+        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg");
         mainPanel.setLayout(new BorderLayout());
 
+        // Stylish title
         JLabel title = new JLabel("Rev & Roast", SwingConstants.CENTER);
-        title.setFont(new Font("Serif", Font.BOLD, 36));
-        title.setForeground(new Color(252, 65, 17)); 
-        title.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
+        title.setFont(new Font("Georgia", Font.BOLD, 42));
+        title.setForeground(new Color(255, 87, 34));
+        title.setBorder(new EmptyBorder(30, 0, 30, 0));
         mainPanel.add(title, BorderLayout.NORTH);
 
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(50, 300, 50, 300)); 
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(30, 280, 30, 280));
 
         JButton browseBtn = createStyledButton("Browse Menu");
         JButton cartBtn = createStyledButton("View Cart");
@@ -72,11 +82,15 @@ public class home extends JFrame {
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text);
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
-        btn.setMaximumSize(new Dimension(200, 40));
-        btn.setBackground(new Color(255, 87, 34)); 
+        btn.setMaximumSize(new Dimension(200, 45));
+        btn.setBackground(new Color(255, 87, 34)); // Orange-red
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
-        btn.setFont(new Font("SansSerif", Font.BOLD, 14));
+        btn.setFont(new Font("SansSerif", Font.BOLD, 16));
+        btn.setOpaque(true);
+        btn.setBorder(BorderFactory.createLineBorder(new Color(255, 87, 34), 1, true)); // Rounded border
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(true);
         return btn;
     }
 
@@ -85,6 +99,9 @@ public class home extends JFrame {
 
         public BackgroundPanel(String fileName) {
             backgroundImage = new ImageIcon(fileName).getImage();
+            if (backgroundImage == null) {
+                System.out.println("Background image not found: " + fileName);
+            }
         }
 
         @Override
