@@ -1,23 +1,13 @@
 import java.awt.*;
 import java.awt.event.*;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.sql.*;
-import java.util.Properties;
 import javax.swing.*;
-import java.io.FileNotFoundException;
+import java.sql.*;
 
 public class register extends JFrame {
     private JLabel imagePreview;
-    private Properties dbProperties;
-    private JTextField nameField, usernameField, emailField;
-    private JPasswordField passwordField;
 
     public register() {
-        loadDatabaseConfig(); // Load database configuration first
-
         setTitle("Rev & Roast - Register");
         setSize(450, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -30,7 +20,6 @@ public class register extends JFrame {
         gbc.insets = new Insets(8, 10, 8, 10);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        // Title
         JLabel title = new JLabel("Register to Rev & Roast", SwingConstants.CENTER);
         title.setFont(new Font("Serif", Font.BOLD, 20));
         title.setForeground(new Color(252, 65, 17));
@@ -39,48 +28,57 @@ public class register extends JFrame {
         gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        // Full Name Field
         gbc.gridwidth = 1;
         gbc.gridy++;
         gbc.gridx = 0;
-        panel.add(createLabel("Full Name:"), gbc);
+        JLabel nameLabel = new JLabel("Full Name:");
+        nameLabel.setForeground(Color.WHITE);
+        panel.add(nameLabel, gbc);
+
         gbc.gridx = 1;
-        nameField = new JTextField(15);
+        JTextField nameField = new JTextField(15);
         panel.add(nameField, gbc);
 
-        // Username Field
         gbc.gridx = 0;
         gbc.gridy++;
-        panel.add(createLabel("Username:"), gbc);
+        JLabel usernameLabel = new JLabel("Username:");
+        usernameLabel.setForeground(Color.WHITE);
+        panel.add(usernameLabel, gbc);
+
         gbc.gridx = 1;
-        usernameField = new JTextField(15);
+        JTextField usernameField = new JTextField(15);
         panel.add(usernameField, gbc);
 
-        // Email Field
         gbc.gridx = 0;
         gbc.gridy++;
-        panel.add(createLabel("Email:"), gbc);
+        JLabel emailLabel = new JLabel("Email:");
+        emailLabel.setForeground(Color.WHITE);
+        panel.add(emailLabel, gbc);
+
         gbc.gridx = 1;
-        emailField = new JTextField(15);
+        JTextField emailField = new JTextField(15);
         panel.add(emailField, gbc);
 
-        // Password Field
         gbc.gridx = 0;
         gbc.gridy++;
-        panel.add(createLabel("Password:"), gbc);
+        JLabel passwordLabel = new JLabel("Password:");
+        passwordLabel.setForeground(Color.WHITE);
+        panel.add(passwordLabel, gbc);
+
         gbc.gridx = 1;
-        passwordField = new JPasswordField(15);
+        JPasswordField passwordField = new JPasswordField(15);
         panel.add(passwordField, gbc);
 
-        // Profile Picture Upload
         gbc.gridx = 0;
         gbc.gridy++;
-        panel.add(createLabel("Profile Picture:"), gbc);
+        JLabel pictureLabel = new JLabel("Profile Picture:");
+        pictureLabel.setForeground(Color.WHITE);
+        panel.add(pictureLabel, gbc);
+
         gbc.gridx = 1;
         JButton uploadBtn = new JButton("Upload Image");
         panel.add(uploadBtn, gbc);
 
-        // Image Preview
         gbc.gridy++;
         gbc.gridwidth = 2;
         gbc.gridx = 0;
@@ -92,48 +90,13 @@ public class register extends JFrame {
         imagePreview.setVerticalAlignment(SwingConstants.CENTER);
         panel.add(imagePreview, gbc);
 
-        // Register Button
         gbc.gridy++;
-        gbc.gridwidth = 2;
-        gbc.gridx = 0;
-        gbc.fill = GridBagConstraints.NONE;
-        gbc.anchor = GridBagConstraints.CENTER;
-        JButton registerBtn = createRegisterButton();
+        JButton registerBtn = new JButton("Register");
+        registerBtn.setBackground(new Color(252, 17, 17));
+        registerBtn.setForeground(Color.WHITE);
         panel.add(registerBtn, gbc);
 
-        // Login Link
         gbc.gridy++;
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        panel.add(createLoginLink(), gbc);
-
-        // Event Handlers
-        uploadBtn.addActionListener(this::handleImageUpload);
-        registerBtn.addActionListener(this::handleRegistration);
-
-        add(panel);
-        setVisible(true);
-    }
-
-    private JLabel createLabel(String text) {
-        JLabel label = new JLabel(text);
-        label.setForeground(Color.WHITE);
-        return label;
-    }
-
-    private JButton createRegisterButton() {
-        JButton button = new JButton("Register");
-        button.setPreferredSize(new Dimension(200, 40));
-        button.setBackground(new Color(252, 17, 17));
-        button.setForeground(Color.WHITE);
-        button.setFocusPainted(false);
-        button.setContentAreaFilled(true);
-        button.setOpaque(true);
-        button.setBorderPainted(false);
-        button.setFont(new Font("SansSerif", Font.BOLD, 16));
-        return button;
-    }
-
-    private JLabel createLoginLink() {
         JLabel loginLabel = new JLabel("Already have an account? Click here to login", SwingConstants.CENTER);
         loginLabel.setForeground(new Color(255, 200, 150));
         loginLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
@@ -154,75 +117,58 @@ public class register extends JFrame {
                 loginLabel.setForeground(new Color(255, 200, 150));
             }
         });
-        return loginLabel;
-    }
+        panel.add(loginLabel, gbc);
 
-    private void loadDatabaseConfig() {
-        dbProperties = new Properties();
-        try (InputStream input = getClass().getResourceAsStream("/config.properties")) {
-            if (input == null) {
-                throw new FileNotFoundException("config.properties not found in classpath");
+        uploadBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            int result = fileChooser.showOpenDialog(this);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                File file = fileChooser.getSelectedFile();
+                ImageIcon icon = new ImageIcon(file.getAbsolutePath());
+                Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                imagePreview.setIcon(new ImageIcon(img));
             }
-            dbProperties.load(input);
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(this,
-                "Failed to load database configuration: " + e.getMessage(),
-                "Configuration Error",
-                JOptionPane.ERROR_MESSAGE);
-            System.exit(1);
-        }
-    }
+        });
 
-    private void handleImageUpload(ActionEvent e) {
-        JFileChooser fileChooser = new JFileChooser();
-        if (fileChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File file = fileChooser.getSelectedFile();
-            ImageIcon icon = new ImageIcon(file.getAbsolutePath());
-            Image img = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
-            imagePreview.setIcon(new ImageIcon(img));
-        }
-    }
+        registerBtn.addActionListener(e -> {
+            String fullName = nameField.getText().trim();
+            String username = usernameField.getText().trim();
+            String email = emailField.getText().trim();
+            String password = new String(passwordField.getPassword()).trim();
 
-    private void handleRegistration(ActionEvent e) {
-        String fullName = nameField.getText().trim();
-        String username = usernameField.getText().trim();
-        String email = emailField.getText().trim();
-        String password = new String(passwordField.getPassword()).trim();
+            if (fullName.isEmpty() || username.isEmpty() || email.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
 
-        if (fullName.isEmpty() || username.isEmpty() || email.isEmpty() || password.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                "Please fill in all fields.",
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-            return;
-        }
+            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/revandroast", "root", "ccinfom123");
+                 PreparedStatement stmt = conn.prepareStatement(
+                         "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)")) {
 
-        try (Connection conn = DriverManager.getConnection(
-                dbProperties.getProperty("db.url"),
-                dbProperties.getProperty("db.username"),
-                dbProperties.getProperty("db.password"));
-             PreparedStatement stmt = conn.prepareStatement(
-                "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)")) {
+                stmt.setString(1, fullName);
+                stmt.setString(2, email);
+                stmt.setString(3, password);
+                stmt.setString(4, "customer"); // default role
 
-            stmt.setString(1, fullName);
-            stmt.setString(2, email);
-            stmt.setString(3, password);
-            stmt.setString(4, "customer");
+                stmt.executeUpdate();
 
-            if (stmt.executeUpdate() > 0) {
                 JOptionPane.showMessageDialog(this, "Registered successfully!");
                 new login().setVisible(true);
                 dispose();
+
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+                JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
-        } catch (SQLException ex) {
-            JOptionPane.showMessageDialog(this,
-                "Database error: " + ex.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
-        }
+        });
+
+        add(panel);
+        setVisible(true);
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new register().setVisible(true));
+        SwingUtilities.invokeLater(() -> {
+            new register().setVisible(true);
+        });
     }
 }
