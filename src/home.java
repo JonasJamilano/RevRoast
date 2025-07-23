@@ -13,7 +13,7 @@ public class home extends JFrame {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg");
+        JPanel mainPanel = new BackgroundPanel("f1bg.jpg");
         mainPanel.setLayout(new BorderLayout());
 
         // HEADER: Title and username at the top
@@ -107,7 +107,8 @@ public class home extends JFrame {
         private Image backgroundImage;
 
         public BackgroundPanel(String fileName) {
-            backgroundImage = new ImageIcon(fileName).getImage();
+            backgroundImage = new ImageIcon(getClass().getClassLoader().getResource(fileName)).getImage();
+
         }
 
         @Override
