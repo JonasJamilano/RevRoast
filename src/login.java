@@ -88,7 +88,7 @@ public class login extends JFrame {
         backButton.setFont(new Font("Arial", Font.PLAIN, 16));
 
         backButton.addActionListener(e -> {
-            new home(); // default home (not logged in)
+            new home(); // home will now check session
             dispose();
         });
         panel.add(backButton, gbc);
@@ -112,11 +112,14 @@ public class login extends JFrame {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    String username = rs.getString("name"); // fetch name or username column
+                    String username = rs.getString("name"); // fetch name
                     String role = rs.getString("role");
 
+                    // Set session
+                    UserSession.setUser(username, role);
+
                     JOptionPane.showMessageDialog(this, "Welcome, " + username + " (" + role + ")!");
-                    new home(username);  // ✅ Pass the username to the home screen
+                    new home();  // no need to pass username
                     dispose();
                 } else {
                     JOptionPane.showMessageDialog(this, "Invalid email or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);

@@ -4,15 +4,12 @@ import javax.swing.*;
 public class home extends JFrame {
 
     public home() {
-        this(null);
-    }
-
-    public home(String username) {
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         setTitle("Rev & Roast - Home");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -30,6 +27,8 @@ public class home extends JFrame {
         title.setFont(new Font("Playfair Display", Font.BOLD, 36));
         title.setForeground(new Color(252, 65, 17));
         headerPanel.add(title, BorderLayout.WEST);
+
+        String username = UserSession.getUsername();
 
         if (username != null) {
             JLabel welcomeLabel = new JLabel("Welcome, " + username + "!");
@@ -55,6 +54,7 @@ public class home extends JFrame {
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         if (username == null) {
+            // If not logged in, show login/register
             JButton loginBtn = createStyledButton("Login");
             JButton registerBtn = createStyledButton("Register");
 
@@ -71,6 +71,17 @@ public class home extends JFrame {
                 new register();
                 dispose();
             });
+
+        } else {
+            // If logged in, show logout
+            JButton logoutBtn = createStyledButton("Logout");
+            buttonPanel.add(logoutBtn);
+
+            logoutBtn.addActionListener(e -> {
+                UserSession.clear();
+                new home(); // Reload home in logged-out state
+                dispose();
+            });
         }
 
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
@@ -85,12 +96,12 @@ public class home extends JFrame {
 
         // Button actions
         browseBtn.addActionListener(e -> {
-            new menu();
+            new menu(); // You may update this later to use UserSession if needed
             dispose();
         });
 
         cartBtn.addActionListener(e -> {
-            new cart();
+            new cart(); // Same here
             dispose();
         });
 
@@ -113,7 +124,6 @@ public class home extends JFrame {
 
         public BackgroundPanel(String fileName) {
             backgroundImage = new ImageIcon(getClass().getClassLoader().getResource(fileName)).getImage();
-
         }
 
         @Override
