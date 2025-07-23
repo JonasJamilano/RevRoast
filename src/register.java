@@ -141,9 +141,10 @@ public class register extends JFrame {
                 return;
             }
 
-            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/revandroast", "root", "ccinfom123");
+            try (Connection conn = DatabaseConnector.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(
                          "INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)")) {
+
 
                 stmt.setString(1, fullName);
                 stmt.setString(2, email);
