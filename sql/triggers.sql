@@ -1,6 +1,8 @@
 USE revandroast;
 
 DELIMITER $$
+
+-- 1. BEFORE ORDER INSERT 
 CREATE TRIGGER before_order_insert
 BEFORE INSERT ON order_items
 FOR EACH ROW
@@ -19,10 +21,8 @@ BEGIN
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = error_msg;
     END IF;
 END$$
-DELIMITER ;
--- 2. AFTER ORDER INSERT: Update stock and log inventory change
-DELIMITER $$
 
+-- 2. AFTER ORDER INSERT 
 CREATE TRIGGER after_order_insert
 AFTER INSERT ON order_items
 FOR EACH ROW
@@ -30,39 +30,26 @@ BEGIN
     -- Update product stock
     UPDATE products
     SET stock_quantity = stock_quantity - NEW.quantity
-    WHERE product_id = NEW.product_id;  -- Semicolon added here
+    WHERE product_id = NEW.product_id;
     
-    -- Log inventory change (for analytics)
+    -- Log inventory change
     INSERT INTO inventory_log (product_id, change_type, quantity, reference_id, log_date)
     VALUES (NEW.product_id, 'order', -NEW.quantity, NEW.order_id, NOW());
-END$$  -- Properly closed with END$$
+END$$
 
-DELIMITER ;
-
-DELIMITER $$
--- 3. AFTER PAYMENT INSERT: Update order status and RPM points
+-- 3. AFTER PAYMENT INSERT 
 CREATE TRIGGER after_payment_insert
 AFTER INSERT ON transaction_log
 FOR EACH ROW
 BEGIN
-    -- If payment is completed, update user's total RPM points
+    -- Simply log the payment completion
     IF NEW.payment_status = 'completed' THEN
-        UPDATE users u
-        JOIN orders o ON u.user_id = o.user_id
-        SET u.rpm_points = IFNULL(u.rpm_points, 0) + NEW.rpm_points_earned
-        WHERE o.order_id = NEW.order_id;
-        
-        -- Log RPM points activity
-        INSERT INTO loyalty_log (user_id, points_change, reason, reference_id, log_date)
-        SELECT o.user_id, NEW.rpm_points_earned, 'order_payment', NEW.transaction_id, NOW()
-        FROM orders o
-        WHERE o.order_id = NEW.order_id;
+        INSERT INTO payment_log (order_id, payment_amount, payment_date)
+        VALUES (NEW.order_id, NEW.amount, NOW());
     END IF;
 END$$
-DELIMITER ;
 
-DELIMITER $$
--- 4. BEFORE PRODUCT DELETE: Prevent deletion of products with orders
+-- 4. BEFORE PRODUCT DELETE 
 CREATE TRIGGER before_product_delete
 BEFORE DELETE ON products
 FOR EACH ROW
@@ -70,23 +57,19 @@ BEGIN
     DECLARE v_order_count INT;
     DECLARE error_msg VARCHAR(255);
     
-    -- Check for existing orders
+    -- Check if product has existing orders
     SELECT COUNT(*) INTO v_order_count
     FROM order_items
     WHERE product_id = OLD.product_id;
     
-    -- Prevent deletion if orders exist
     IF v_order_count > 0 THEN
         SET error_msg = CONCAT('Cannot delete product #', OLD.product_id, 
-                             ' - it has ', v_order_count, 
-                             ' associated orders');
+                             ' - it has ', v_order_count, ' associated orders');
         SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = error_msg;
     END IF;
 END$$
-DELIMITER ;
 
-DELIMITER $$
--- 5. AFTER USER UPDATE: Log role changes and send notification
+-- 5. AFTER USER UPDATE 
 CREATE TRIGGER after_user_update
 AFTER UPDATE ON users
 FOR EACH ROW

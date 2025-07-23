@@ -2,7 +2,7 @@ USE revandroast;
 
 DELIMITER $$
 
--- 1. PLACE ORDER (with inventory check and RPM points)
+-- 1. PLACE ORDER 
 CREATE PROCEDURE place_order(
     IN p_user_id INT,
     IN p_product_id INT,
@@ -13,7 +13,6 @@ BEGIN
     DECLARE v_price DECIMAL(10,2);
     DECLARE v_total DECIMAL(10,2);
     DECLARE v_currency_id INT;
-    DECLARE v_rpm_points INT;
     
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -30,9 +29,8 @@ BEGIN
     WHERE product_id = p_product_id FOR UPDATE;
     
     IF v_stock >= p_quantity THEN
-        -- Calculate total and RPM points (10 points per ₱100)
+        -- Calculate total
         SET v_total = v_price * p_quantity;
-        SET v_rpm_points = FLOOR(v_total / 100) * 10;
         
         -- Create order
         INSERT INTO orders (user_id, total_amount, currency_id)
@@ -49,19 +47,19 @@ BEGIN
         SET stock_quantity = stock_quantity - p_quantity
         WHERE product_id = p_product_id;
         
-        -- Log transaction with RPM points
-        INSERT INTO transaction_log (order_id, payment_method, payment_status, amount, rpm_points_earned)
-        VALUES (@last_order_id, 'Pending', 'pending', v_total, v_rpm_points);
+        -- Log transaction (without RPM points)
+        INSERT INTO transaction_log (order_id, payment_method, payment_status, amount)
+        VALUES (@last_order_id, 'Pending', 'pending', v_total);
         
         COMMIT;
-        SELECT CONCAT('Order #', @last_order_id, ' placed! Earned ', v_rpm_points, ' RPM points') AS message;
+        SELECT CONCAT('Order #', @last_order_id, ' placed successfully!') AS message;
     ELSE
         ROLLBACK;
         SELECT 'Insufficient stock' AS error;
     END IF;
 END$$
 
--- 2. UPDATE PRODUCT STOCK (with audit logging)
+-- 2. UPDATE PRODUCT STOCK 
 CREATE PROCEDURE update_product_stock(
     IN p_product_id INT,
     IN p_new_quantity INT,
@@ -90,7 +88,7 @@ BEGIN
     SELECT CONCAT('Stock updated from ', v_old_quantity, ' to ', p_new_quantity) AS message;
 END$$
 
--- 3. GET ORDER HISTORY (with product details)
+-- 3. GET ORDER HISTORY 
 CREATE PROCEDURE get_order_history(
     IN p_user_id INT
 )
@@ -100,23 +98,21 @@ BEGIN
         o.order_date,
         o.total_amount,
         c.symbol AS currency,
-        GROUP_CONCAT(CONCAT(oi.quantity, 'x ', p.name) SEPARATOR ', ') AS items,
-        SUM(t.rpm_points_earned) AS rpm_points_earned
+        GROUP_CONCAT(CONCAT(oi.quantity, 'x ', p.name) SEPARATOR ', ') AS items
     FROM orders o
     JOIN order_items oi ON o.order_id = oi.order_id
     JOIN products p ON oi.product_id = p.product_id
     JOIN currencies c ON o.currency_id = c.currency_id
-    LEFT JOIN transaction_log t ON o.order_id = t.order_id
     WHERE o.user_id = p_user_id
     GROUP BY o.order_id
     ORDER BY o.order_date DESC;
 END$$
 
--- 4. PROCESS PAYMENT (with status validation)
+-- 4. PROCESS PAYMENT 
 CREATE PROCEDURE process_payment(
     IN p_order_id INT,
-    IN p_payment_method VARCHAR(50)
-)
+    IN p_payment_method VARCHAR(50)  -- WAS MISSING THE CLOSING PAREN
+)  -- THIS LINE WAS MISSING
 BEGIN
     DECLARE v_order_status VARCHAR(20);
     DECLARE v_total DECIMAL(10,2);
@@ -141,7 +137,7 @@ BEGIN
     END IF;
 END$$
 
--- 5. CURRENCY CONVERTER (dynamic rates)
+-- 5. CURRENCY CONVERTER 
 CREATE PROCEDURE convert_currency(
     IN p_amount DECIMAL(10,2),
     IN p_from_currency VARCHAR(5),
