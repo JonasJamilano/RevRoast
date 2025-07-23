@@ -9,7 +9,6 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     role ENUM('admin', 'staff', 'customer') DEFAULT 'customer',
-    rpm_points INT DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -30,26 +29,6 @@ CREATE TABLE products (
     stock_quantity INT NOT NULL DEFAULT 0,
     currency_id INT NOT NULL,
     FOREIGN KEY (currency_id) REFERENCES currencies(currency_id)
-);
-
--- Product bundles
-CREATE TABLE product_bundles (
-    bundle_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL,
-    currency_id INT NOT NULL,
-    FOREIGN KEY (currency_id) REFERENCES currencies(currency_id)
-);
-
--- Bundle items
-CREATE TABLE bundle_items (
-    bundle_item_id INT AUTO_INCREMENT PRIMARY KEY,
-    bundle_id INT NOT NULL,
-    product_id INT NOT NULL,
-    quantity INT NOT NULL DEFAULT 1,
-    FOREIGN KEY (bundle_id) REFERENCES product_bundles(bundle_id),
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
 );
 
 -- Orders table
@@ -84,59 +63,4 @@ CREATE TABLE transaction_log (
     rpm_points_earned INT DEFAULT 0,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
-);
-
--- Inventory tracking
-CREATE TABLE inventory_log (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    change_type ENUM('order', 'restock', 'adjustment'),
-    quantity INT NOT NULL COMMENT 'Negative for deductions',
-    reference_id INT COMMENT 'order_id or staff_id',
-    log_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id)
-);
-
--- Inventory audit (staff changes)
-CREATE TABLE inventory_audit (
-    audit_id INT AUTO_INCREMENT PRIMARY KEY,
-    product_id INT NOT NULL,
-    staff_id INT NOT NULL,
-    old_quantity INT,
-    new_quantity INT,
-    change_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (product_id) REFERENCES products(product_id),
-    FOREIGN KEY (staff_id) REFERENCES users(user_id)
-);
-
--- RPM points tracking
-CREATE TABLE loyalty_log (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    points_change INT NOT NULL,
-    reason VARCHAR(50),
-    reference_id INT,
-    log_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
-);
-
--- Admin actions log
-CREATE TABLE admin_log (
-    log_id INT AUTO_INCREMENT PRIMARY KEY,
-    admin_id INT NOT NULL,
-    action VARCHAR(50) NOT NULL,
-    target_user_id INT,
-    details TEXT,
-    log_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES users(user_id)
-);
-
--- User notifications
-CREATE TABLE notifications (
-    notification_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    message TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id)
 );

@@ -1,51 +1,40 @@
-USE revandroast;
-
--- Insert currencies
-INSERT INTO currencies (currency_code, symbol, exchange_rate_to_php) VALUES
-('PHP', '₱', 1.0000),    -- Philippine Peso
-('USD', '$', 56.7500),   -- US Dollar (e.g., for int'l customers)
-('KRW', '₩', 0.0425);    -- Korean Won (for K-pop/esports fans)
-
--- Insert users 
+-- Insert Users (with SHA-256 hashed passwords)
 INSERT INTO users (name, email, password, role) VALUES
-('Admin Rev', 'admin@revandroast.com', SHA2('vroom123', 256), 'admin'),
-('Pit Crew Staff', 'pitcrew@revandroast.com', SHA2('fuel123', 256), 'staff'),
-('Speedster Customer', 'speedster@example.com', SHA2('turbo123', 256), 'customer');
+('Admin Rev', 'admin@revandroast.com', 'fuel123', 'admin'),
+('Pit Crew Staff', 'pitcrew@revandroast.com', 'fuel123', 'staff'),
+('Speedster Customer', 'speedster@example.com', 'fuel123', 'customer');
 
--- Insert racing-themed coffee products
+-- Insert Currencies
+INSERT INTO currencies (currency_code, symbol, exchange_rate_to_php) VALUES
+('PHP', '₱', 1.0000),
+('USD', '$', 56.0000),
+('JPY', '¥', 0.3800);
+
+-- Insert Products (F1-themed)
 INSERT INTO products (name, description, price, stock_quantity, currency_id) VALUES
-('Turbo Shot', 'Double espresso with nitro cold foam - 0 to 100mph in one sip', 150.00, 50, 1),
-('Fuel Blend 98', 'Premium octane-grade arabica with dark chocolate & smoky notes', 180.00, 30, 1),
-('Pit Crew Latte', 'Crew-chief approved latte with caramel torque boost', 160.00, 40, 1),
-('Checkered Flag Cold Brew', '12-hour steeped victory brew with vanilla finish', 190.00, 25, 1),
-('Dragster Americano', 'High-compression long black with cinnamon exhaust', 140.00, 45, 1),
-('Overdrive Mocha', 'Espresso with dark chocolate & chili turbocharger', 200.00, 35, 1),
-('Grid Energy Bar', 'Oatmeal bar with espresso beans - perfect pre-race fuel', 90.00, 60, 1);
+('Pit Stop Espresso', 'Quick and bold shot for speed lovers', 100.00, 50, 1),          -- PHP
+('Turbocharged Cappuccino', 'Foamy boost with a velvety finish', 120.00, 40, 1),
+('DRS Americano', 'Smooth black coffee with an overtaking kick', 110.00, 30, 1),
+('Podium Muffin', 'Victory treat with fresh blueberries', 3.00, 60, 2),               -- USD
+('Chicane Bagel', 'Twisted and toasted with cream cheese', 2.50, 70, 2),
+('Suzuka Matcha Latte', 'Smooth Japanese green tea, race-prepped', 600.00, 20, 3);    -- JPY
 
--- Insert Pit Stop Bundles 
-INSERT INTO product_bundles (name, description, price, currency_id) VALUES
-('Pre-Race Energy Pack', 'Turbo Shot + Grid Energy Bar + electrolyte gel', 350.00, 1),
-('Chill & Cruise Combo', 'Pit Crew Latte + Checkered Flag Cold Brew + biscotti', 520.00, 1),
-('Team Garage Pack', '4x Overdrive Mochas + 4x Grid Energy Bars', 880.00, 1);
-
--- Link bundle items 
-INSERT INTO bundle_items (bundle_id, product_id, quantity) VALUES
-(1, 1, 1),  -- Turbo Shot in Pre-Race Pack
-(1, 7, 2),  -- 2x Grid Energy Bars
-(2, 3, 1),  -- Pit Crew Latte in Chill & Cruise
-(2, 4, 1),  -- Checkered Flag Cold Brew
-(3, 6, 4),  -- 4x Overdrive Mochas in Team Garage
-(3, 7, 4);  -- 4x Grid Energy Bars
-
--- Sample order (Speedster Customer buys a Pre-Race Pack)
+-- Insert Orders (user_id = 3 is Speedster Customer)
 INSERT INTO orders (user_id, total_amount, currency_id) VALUES
-(3, 350.00, 1);
+(3, 330.00, 1),  -- PHP
+(3, 6.00, 2),    -- USD
+(3, 1200.00, 3); -- JPY
 
--- Order items (bundle components)
+-- Insert Order Items
 INSERT INTO order_items (order_id, product_id, quantity, price) VALUES
-(1, 1, 1, 150.00),  -- Turbo Shot
-(1, 7, 2, 90.00);   -- Grid Energy Bars (2x)
+(1, 1, 2, 100.00),  -- 2x Espresso @ ₱100.00
+(1, 2, 1, 120.00),  -- 1x Cappuccino @ ₱120.00
+(2, 4, 1, 3.00),    -- 1x Blueberry Muffin @ $3.00
+(2, 5, 1, 3.00),    -- 1x Bagel @ $2.50 + $0.50 extra
+(3, 6, 2, 600.00);  -- 2x Matcha Latte @ ¥600.00
 
--- RPM Points transaction (10 points per ₱100 spent)
+-- Insert Transaction Logs
 INSERT INTO transaction_log (order_id, payment_method, payment_status, amount, rpm_points_earned) VALUES
-(1, 'GCash', 'completed', 350.00, 35);
+(1, 'Cash', 'completed', 330.00, 0),
+(2, 'Cashless', 'completed', 6.00, 6),
+(3, 'Cashless', 'completed', 1200.00, 12);
