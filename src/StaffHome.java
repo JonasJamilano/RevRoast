@@ -1,14 +1,16 @@
+// StaffHome.java
 import java.awt.*;
 import javax.swing.*;
 
 public class StaffHome extends JFrame {
+    private String username;
 
     public StaffHome(String username) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        this.username = username;
+        initializeUI();
+    }
+
+    private void initializeUI() {
         setTitle("Rev & Roast - Staff Dashboard");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -17,7 +19,7 @@ public class StaffHome extends JFrame {
         JPanel mainPanel = new BackgroundPanel("f1bg.jpg");
         mainPanel.setLayout(new BorderLayout());
 
-        // HEADER: Title and username at the top
+        // Header panel
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
@@ -34,14 +36,14 @@ public class StaffHome extends JFrame {
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // CENTER: Main buttons
+        // Center buttons
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(80, 300, 50, 300));
 
         JButton productManagementBtn = createStyledButton("Product Management");
-        JButton transactionLogBtn = createStyledButton("Check Transaction Log");
+        JButton transactionLogBtn = createStyledButton("Transaction Log");
         JButton inventoryAuditBtn = createStyledButton("Inventory Audit");
         JButton logoutBtn = createStyledButton("Logout");
 
@@ -55,7 +57,7 @@ public class StaffHome extends JFrame {
 
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
 
-        // FOOTER
+        // Footer
         JLabel footer = new JLabel("© 2025 Rev & Roast - Staff Access", SwingConstants.CENTER);
         footer.setForeground(Color.LIGHT_GRAY);
         footer.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
@@ -65,17 +67,17 @@ public class StaffHome extends JFrame {
 
         // Button actions
         productManagementBtn.addActionListener(e -> {
-            new ProductManagement();
+            new ProductManagement(username);
             dispose();
         });
 
         transactionLogBtn.addActionListener(e -> {
-            new TransactionLog();
+            new TransactionLog(username);
             dispose();
         });
 
         inventoryAuditBtn.addActionListener(e -> {
-            new InventoryAudit();
+            new InventoryAudit(username);
             dispose();
         });
 
@@ -109,52 +111,6 @@ public class StaffHome extends JFrame {
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
             g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
-        }
-    }
-
-    //classes for the buttons
-    class ProductManagement extends JFrame {
-        public ProductManagement() {
-            // Implementation for product management
-            setTitle("Product Management");
-            setSize(600, 400);
-            setLocationRelativeTo(null);
-            
-            JPanel panel = new JPanel();
-            panel.add(new JLabel("Product Management Panel - Staff Access"));
-            add(panel);
-            
-            setVisible(true);
-        }
-    }
-
-    class TransactionLog extends JFrame {
-        public TransactionLog() {
-            // Implementation for transaction log
-            setTitle("Transaction Log");
-            setSize(600, 400);
-            setLocationRelativeTo(null);
-            
-            JPanel panel = new JPanel();
-            panel.add(new JLabel("Transaction Log - Staff Access"));
-            add(panel);
-            
-            setVisible(true);
-        }
-    }
-
-    class InventoryAudit extends JFrame {
-        public InventoryAudit() {
-            // Implementation for inventory audit
-            setTitle("Inventory Audit");
-            setSize(600, 400);
-            setLocationRelativeTo(null);
-            
-            JPanel panel = new JPanel();
-            panel.add(new JLabel("Inventory Audit - Staff Access"));
-            add(panel);
-            
-            setVisible(true);
         }
     }
 }
