@@ -99,12 +99,16 @@ public class login extends JFrame {
             String password = new String(passwordField.getPassword());
 
             if (email.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(this, "Please fill in all fields.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Please fill in all fields.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
                 return;
             }
 
             try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE email = ? AND password = ?")) {
+                 PreparedStatement stmt = conn.prepareStatement(
+                         "SELECT user_id, name, role, email FROM users WHERE email = ? AND password = ?")) {
 
                 stmt.setString(1, email);
                 stmt.setString(2, password);
@@ -112,19 +116,35 @@ public class login extends JFrame {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    String username = rs.getString("name"); // fetch name or username column
+                    int userId = rs.getInt("user_id");
+                    String username = rs.getString("name");
                     String role = rs.getString("role");
+                    String userEmail = rs.getString("email");
 
-                    JOptionPane.showMessageDialog(this, "Welcome, " + username + " (" + role + ")!");
-                    new home(username);  // ✅ Pass the username to the home screen
+                    // Store user details in a User object if needed
+                    User currentUser = new User(userId, username, userEmail, role);
+
+                    JOptionPane.showMessageDialog(this,
+                            "Welcome back, " + username + "!",
+                            "Login Successful",
+                            JOptionPane.INFORMATION_MESSAGE);
+
+                    // Pass both username AND user ID to home screen
+                    new home(username, userId);
                     dispose();
                 } else {
-                    JOptionPane.showMessageDialog(this, "Invalid email or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(this,
+                            "Invalid email or password.",
+                            "Login Failed",
+                            JOptionPane.ERROR_MESSAGE);
                 }
 
-            } catch (Exception ex) {
+            } catch (SQLException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Database error: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -132,7 +152,30 @@ public class login extends JFrame {
         setVisible(true);
     }
 
+    // User class to store user data
+    private static class User {
+        private int id;
+        private String name;
+        private String email;
+        private String role;
+
+        public User(int id, String name, String email, String role) {
+            this.id = id;
+            this.name = name;
+            this.email = email;
+            this.role = role;
+        }
+
+        // Getters
+        public int getId() { return id; }
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getRole() { return role; }
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(login::new);
+        SwingUtilities.invokeLater(() -> {
+            new login().setVisible(true);
+        });
     }
 }

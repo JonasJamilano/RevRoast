@@ -18,6 +18,7 @@ public class menu extends JFrame {
     private final Color DARK_GRAY = new Color(40, 40, 40);
     private final Color LIGHT_GRAY = new Color(100, 100, 100);
     private final Color PANEL_BG = new Color(25, 25, 25);
+    private final Color SUCCESS_GREEN = new Color(0, 180, 0);
 
     // UI Components
     private JPanel menuPanel;
@@ -26,45 +27,28 @@ public class menu extends JFrame {
     private Map<String, Double> exchangeRates;
     private java.util.List<String> cartItems;
     private Map<String, Integer> cartQuantities;
+    private int currentUserId;
+    private JButton viewCartBtn;
 
     public menu() {
-        // Initialize fonts
-        loadCustomFonts();
-
-        // Window setup
-        setTitle("REV & ROAST");
-        setSize(950, 700);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setLocationRelativeTo(null);
-        getContentPane().setBackground(Color.BLACK);
-
-        // Data initialization
-        cartItems = new ArrayList<>();
-        cartQuantities = new HashMap<>();
-        initializeExchangeRates();
-
-        // Main panel
-        JPanel mainPanel = new JPanel(new BorderLayout());
-        mainPanel.setBackground(PANEL_BG);
-        mainPanel.setBorder(new MatteBorder(1, 1, 1, 1, DARK_GRAY));
-
-        // Build UI components
-        mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
-        mainPanel.add(createMenuScrollPane(), BorderLayout.CENTER);
-        mainPanel.add(createFooterPanel(), BorderLayout.SOUTH);
-
-        add(mainPanel);
-        setVisible(true);
+        this(-1); // Guest constructor
     }
 
-    private void loadCustomFonts() {
+    public menu(int userId) {
+        this.currentUserId = userId;
+
+        // Initialize UI
+        initializeFonts();
+        setupWindow();
+        initializeData();
+        buildUI();
+    }
+
+    private void initializeFonts() {
         try {
-            // Try to load Montserrat
             FONT_TITLE = Font.createFont(Font.TRUETYPE_FONT,
                     new File("fonts/Montserrat-Bold.ttf")).deriveFont(36f);
             FONT_HEADER = FONT_TITLE.deriveFont(14f);
-
-            // Try to load Inter
             FONT_BODY = Font.createFont(Font.TRUETYPE_FONT,
                     new File("fonts/Inter-Regular.ttf")).deriveFont(14f);
             FONT_BUTTON = Font.createFont(Font.TRUETYPE_FONT,
@@ -84,11 +68,39 @@ public class menu extends JFrame {
         }
     }
 
+    private void setupWindow() {
+        setTitle("REV & ROAST");
+        setSize(950, 700);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+        getContentPane().setBackground(Color.BLACK);
+    }
+
+    private void initializeData() {
+        cartItems = new ArrayList<>();
+        cartQuantities = new HashMap<>();
+        initializeExchangeRates();
+    }
+
     private void initializeExchangeRates() {
         exchangeRates = new HashMap<>();
         exchangeRates.put("PHP", 1.0);
         exchangeRates.put("USD", 0.018);
         exchangeRates.put("YEN", 2.6);
+    }
+
+    private void buildUI() {
+        // Main panel
+        JPanel mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(PANEL_BG);
+        mainPanel.setBorder(new MatteBorder(1, 1, 1, 1, DARK_GRAY));
+
+        // Build components
+        mainPanel.add(createHeaderPanel(), BorderLayout.NORTH);
+        mainPanel.add(createMenuScrollPane(), BorderLayout.CENTER);
+        mainPanel.add(createFooterPanel(), BorderLayout.SOUTH);
+
+        add(mainPanel);
     }
 
     private JPanel createHeaderPanel() {
@@ -104,11 +116,6 @@ public class menu extends JFrame {
         title.setFont(FONT_TITLE);
         title.setForeground(Color.WHITE);
         title.setHorizontalAlignment(SwingConstants.LEFT);
-
-        // Divider
-        JSeparator divider = new JSeparator(SwingConstants.HORIZONTAL);
-        divider.setForeground(LIGHT_GRAY);
-        divider.setPreferredSize(new Dimension(getWidth(), 1));
 
         // Currency selector
         currencyDropdown = new JComboBox<>(new String[]{"PHP", "USD", "YEN"});
@@ -132,7 +139,6 @@ public class menu extends JFrame {
 
         headerPanel.add(title, BorderLayout.WEST);
         headerPanel.add(currencyPanel, BorderLayout.EAST);
-        headerPanel.add(divider, BorderLayout.SOUTH);
 
         return headerPanel;
     }
@@ -153,11 +159,15 @@ public class menu extends JFrame {
     private JPanel createFooterPanel() {
         JButton backBtn = createMinimalButton("BACK", DARK_GRAY);
         backBtn.addActionListener(e -> {
+            if (currentUserId > 0) {
+                new home("User", currentUserId);
+            } else {
+                new home();
+            }
             dispose();
-            new home();
         });
 
-        JButton viewCartBtn = createMinimalButton("CART (0)", RACING_RED);
+        viewCartBtn = createMinimalButton("CART (0)", RACING_RED);
         viewCartBtn.addActionListener(e -> showCart());
 
         JPanel footerPanel = new JPanel();
@@ -197,24 +207,28 @@ public class menu extends JFrame {
 
         try (Connection conn = DatabaseConnector.getConnection();
              Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT name, price FROM products")) {
+             ResultSet rs = stmt.executeQuery("SELECT product_id, name, price, stock_quantity FROM products")) {
 
             while (rs.next()) {
                 String productName = rs.getString("name");
                 double basePrice = rs.getDouble("price");
-                addMenuItem(productName, basePrice);
+                int stock = rs.getInt("stock_quantity");
+                addMenuItem(productName, basePrice, stock);
             }
 
         } catch (SQLException e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Error loading menu: " + e.getMessage(),
+                    "Database Error",
+                    JOptionPane.ERROR_MESSAGE);
         }
 
         menuPanel.revalidate();
         menuPanel.repaint();
     }
 
-    private void addMenuItem(String name, double basePricePHP) {
+    private void addMenuItem(String name, double basePricePHP, int stock) {
         JPanel card = new JPanel(new BorderLayout());
         card.setBackground(DARK_GRAY);
         card.setBorder(new CompoundBorder(
@@ -229,13 +243,22 @@ public class menu extends JFrame {
         itemName.setForeground(Color.WHITE);
         itemName.setBorder(new EmptyBorder(0, 0, 10, 0));
 
-        // Price
+        // Price and stock
         double convertedPrice = basePricePHP * exchangeRates.get(selectedCurrency);
         String currencySymbol = selectedCurrency.equals("USD") ? "$" :
                 selectedCurrency.equals("YEN") ? "¥" : "₱";
         JLabel itemPrice = new JLabel(currencySymbol + String.format("%.2f", convertedPrice));
         itemPrice.setFont(FONT_PRICE);
         itemPrice.setForeground(RACING_RED);
+
+        JLabel stockLabel = new JLabel(stock + " available");
+        stockLabel.setFont(FONT_BODY.deriveFont(12f));
+        stockLabel.setForeground(stock > 0 ? SUCCESS_GREEN : Color.RED);
+
+        JPanel pricePanel = new JPanel(new BorderLayout());
+        pricePanel.setBackground(DARK_GRAY);
+        pricePanel.add(itemPrice, BorderLayout.NORTH);
+        pricePanel.add(stockLabel, BorderLayout.SOUTH);
 
         // Quantity controls
         JPanel qtyPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
@@ -245,7 +268,7 @@ public class menu extends JFrame {
         qtyLabel.setFont(FONT_BODY);
         qtyLabel.setForeground(LIGHT_GRAY);
 
-        JSpinner qtySpinner = new JSpinner(new SpinnerNumberModel(1, 1, 99, 1));
+        JSpinner qtySpinner = new JSpinner(new SpinnerNumberModel(1, 1, stock > 0 ? stock : 1, 1));
         qtySpinner.setPreferredSize(new Dimension(50, 25));
         qtySpinner.setFont(FONT_BODY);
         ((JSpinner.DefaultEditor) qtySpinner.getEditor()).getTextField().setBackground(PANEL_BG);
@@ -265,30 +288,48 @@ public class menu extends JFrame {
                 new EmptyBorder(5, 10, 5, 10)
         ));
         addBtn.setFocusPainted(false);
+
+        if (stock <= 0) {
+            addBtn.setEnabled(false);
+            addBtn.setBackground(new Color(80, 80, 80));
+            addBtn.setBorder(new CompoundBorder(
+                    new LineBorder(new Color(100, 100, 100), 1),
+                    new EmptyBorder(5, 10, 5, 10)
+            ));
+        }
+
         addBtn.addActionListener(e -> {
             int quantity = (Integer) qtySpinner.getValue();
             String itemKey = name + " - " + currencySymbol + String.format("%.2f", convertedPrice);
 
-            if (!cartItems.contains(itemKey)) {
-                cartItems.add(itemKey);
-                cartQuantities.put(itemKey, quantity);
-            } else {
-                cartQuantities.put(itemKey, cartQuantities.get(itemKey) + quantity);
+            try (Connection conn = DatabaseConnector.getConnection();
+                 CallableStatement stmt = conn.prepareCall("{call add_to_cart(?, ?)}")) {
+
+                int productId = getProductIdByName(name);
+                stmt.setInt(1, productId);
+                stmt.setInt(2, quantity);
+                stmt.execute();
+
+                if (!cartItems.contains(itemKey)) {
+                    cartItems.add(itemKey);
+                    cartQuantities.put(itemKey, quantity);
+                } else {
+                    cartQuantities.put(itemKey, cartQuantities.get(itemKey) + quantity);
+                }
+
+                updateCartButtonCount();
+                showSuccessMessage(quantity + " × " + name + " added to cart");
+
+            } catch (SQLException ex) {
+                showErrorMessage("Failed to add to cart: " + ex.getMessage());
             }
-
-            updateCartButtonCount();
-
-            JOptionPane.showMessageDialog(this,
-                    quantity + " × " + name + " added",
-                    "",
-                    JOptionPane.PLAIN_MESSAGE);
         });
 
         // Assembly
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setBackground(DARK_GRAY);
         infoPanel.add(itemName, BorderLayout.NORTH);
-        infoPanel.add(itemPrice, BorderLayout.CENTER);
+        infoPanel.add(pricePanel, BorderLayout.CENTER);
 
         JPanel bottomPanel = new JPanel(new BorderLayout());
         bottomPanel.setBackground(DARK_GRAY);
@@ -301,24 +342,38 @@ public class menu extends JFrame {
         menuPanel.add(card);
     }
 
-    private void updateCartButtonCount() {
-        int totalItems = cartQuantities.values().stream().mapToInt(Integer::intValue).sum();
-
-        for (Component comp : getContentPane().getComponents()) {
-            if (comp instanceof JPanel) {
-                for (Component subComp : ((JPanel) comp).getComponents()) {
-                    if (subComp instanceof JButton && ((JButton) subComp).getText().startsWith("CART")) {
-                        ((JButton) subComp).setText("CART (" + totalItems + ")");
-                        return;
-                    }
-                }
+    private int getProductIdByName(String productName) throws SQLException {
+        try (Connection conn = DatabaseConnector.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT product_id FROM products WHERE name = ?")) {
+            stmt.setString(1, productName);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("product_id");
             }
         }
+        throw new SQLException("Product not found: " + productName);
+    }
+
+    private int getCurrencyIdByCode(String currencyCode) throws SQLException {
+        try (Connection conn = DatabaseConnector.getConnection();
+             PreparedStatement stmt = conn.prepareStatement("SELECT currency_id FROM currencies WHERE currency_code = ?")) {
+            stmt.setString(1, currencyCode);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("currency_id");
+            }
+        }
+        throw new SQLException("Currency not found: " + currencyCode);
+    }
+
+    private void updateCartButtonCount() {
+        int totalItems = cartQuantities.values().stream().mapToInt(Integer::intValue).sum();
+        viewCartBtn.setText("CART (" + totalItems + ")");
     }
 
     private void showCart() {
         if (cartItems.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Your cart is empty", "", JOptionPane.PLAIN_MESSAGE);
+            showInformationMessage("Your cart is empty");
             return;
         }
 
@@ -365,10 +420,24 @@ public class menu extends JFrame {
         cartContent.setText(cartText.toString());
         cartPanel.add(new JScrollPane(cartContent), BorderLayout.CENTER);
 
+        // Payment options
+        JPanel paymentPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        paymentPanel.setBackground(PANEL_BG);
+        JLabel paymentLabel = new JLabel("Payment Method:");
+        paymentLabel.setFont(FONT_BODY);
+        paymentLabel.setForeground(Color.WHITE);
+        JComboBox<String> paymentOptions = new JComboBox<>(new String[]{"Cash", "Credit Card", "GCash"});
+        paymentPanel.add(paymentLabel);
+        paymentPanel.add(paymentOptions);
+
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(paymentPanel, BorderLayout.NORTH);
+        bottomPanel.add(cartPanel, BorderLayout.CENTER);
+
         Object[] options = {"CHECKOUT", "CONTINUE SHOPPING"};
         int choice = JOptionPane.showOptionDialog(
                 this,
-                cartPanel,
+                bottomPanel,
                 "",
                 JOptionPane.YES_NO_OPTION,
                 JOptionPane.PLAIN_MESSAGE,
@@ -378,22 +447,186 @@ public class menu extends JFrame {
         );
 
         if (choice == JOptionPane.YES_OPTION) {
-            JOptionPane.showMessageDialog(this, "Order placed successfully", "", JOptionPane.PLAIN_MESSAGE);
-            cartItems.clear();
-            cartQuantities.clear();
-            updateCartButtonCount();
+            processCheckout(paymentOptions);
         }
     }
 
-    public static void main(String[] args) {
-        try {
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
+    private void processCheckout(JComboBox<String> paymentOptions) {
+        if (currentUserId <= 0) {
+            int response = JOptionPane.showConfirmDialog(
+                    this,
+                    "You need to login to checkout. Login now?",
+                    "Login Required",
+                    JOptionPane.YES_NO_OPTION);
+
+            if (response == JOptionPane.YES_OPTION) {
+                new login();
+                dispose();
+            }
+            return;
         }
 
+        if (cartItems.isEmpty()) {
+            showErrorMessage("Your cart is empty");
+            return;
+        }
+
+        // Calculate total amount from cart
+        double totalAmount = calculateCartTotal();
+        String paymentMethod = (String) paymentOptions.getSelectedItem();
+        int currencyId;
+
+        try {
+            currencyId = getCurrencyIdByCode(selectedCurrency);
+        } catch (SQLException ex) {
+            showErrorMessage("Error getting currency: " + ex.getMessage());
+            return;
+        }
+
+        try (Connection conn = DatabaseConnector.getConnection()) {
+            conn.setAutoCommit(false); // Start transaction
+
+            try {
+                // 1. Create the order and get order ID
+                int orderId;
+                int rpmPointsEarned;
+                int totalUserPoints;
+
+                try (CallableStatement orderStmt = conn.prepareCall(
+                        "{call complete_order(?, ?, ?, ?, ?, ?)}")) {
+
+                    orderStmt.setInt(1, currentUserId);
+                    orderStmt.setInt(2, currencyId);
+                    orderStmt.setString(3, paymentMethod);
+                    orderStmt.setDouble(4, totalAmount);
+                    orderStmt.registerOutParameter(5, Types.INTEGER); // order_id
+                    orderStmt.registerOutParameter(6, Types.INTEGER); // rpm_points_earned
+
+                    orderStmt.execute();
+
+                    orderId = orderStmt.getInt(5);
+                    rpmPointsEarned = orderStmt.getInt(6);
+                }
+
+                // 2. Get current total points after update
+                try (PreparedStatement pointsStmt = conn.prepareStatement(
+                        "SELECT rpm_points FROM users WHERE user_id = ?")) {
+                    pointsStmt.setInt(1, currentUserId);
+                    ResultSet rs = pointsStmt.executeQuery();
+                    totalUserPoints = rs.next() ? rs.getInt("rpm_points") : 0;
+                }
+
+                // 3. Insert all order items
+                try (PreparedStatement itemStmt = conn.prepareStatement(
+                        "INSERT INTO order_items (order_id, product_id, quantity, price) " +
+                                "VALUES (?, ?, ?, (SELECT price FROM products WHERE product_id = ?))")) {
+
+                    for (String item : cartItems) {
+                        String productName = item.split(" - ")[0];
+                        int quantity = cartQuantities.get(item);
+                        int productId = getProductIdByName(productName);
+
+                        itemStmt.setInt(1, orderId);
+                        itemStmt.setInt(2, productId);
+                        itemStmt.setInt(3, quantity);
+                        itemStmt.setInt(4, productId);
+                        itemStmt.addBatch();
+                    }
+                    itemStmt.executeBatch();
+                }
+
+                // 4. Update product stocks
+                try (PreparedStatement stockStmt = conn.prepareStatement(
+                        "UPDATE products SET stock_quantity = stock_quantity - ? " +
+                                "WHERE product_id = ?")) {
+
+                    for (String item : cartItems) {
+                        String productName = item.split(" - ")[0];
+                        int quantity = cartQuantities.get(item);
+                        int productId = getProductIdByName(productName);
+
+                        stockStmt.setInt(1, quantity);
+                        stockStmt.setInt(2, productId);
+                        stockStmt.addBatch();
+                    }
+                    stockStmt.executeBatch();
+                }
+
+                conn.commit(); // Commit transaction if all succeeded
+
+                // Show success message with points information
+                showSuccessMessage(
+                        "Order #" + orderId + " completed!\n" +
+                                "Total: " + String.format("%.2f", totalAmount) + "\n" +
+                                "Earned " + rpmPointsEarned + " RPM points\n" +
+                                "Your total points: " + totalUserPoints);
+
+                // Clear cart
+                cartItems.clear();
+                cartQuantities.clear();
+                updateCartButtonCount();
+
+                // Refresh menu to update stock quantities
+                updateMenuItems();
+
+            } catch (SQLException ex) {
+                try {
+                    conn.rollback(); // Rollback on error
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+                showErrorMessage("Checkout failed: " + ex.getMessage());
+                ex.printStackTrace();
+            } finally {
+                try {
+                    conn.setAutoCommit(true);
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            }
+
+        } catch (SQLException ex) {
+            showErrorMessage("Database connection error: " + ex.getMessage());
+            ex.printStackTrace();
+        }
+    }
+
+    private int getCurrentUserPoints(Connection conn) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT rpm_points FROM users WHERE user_id = ?")) {
+            stmt.setInt(1, currentUserId);
+            ResultSet rs = stmt.executeQuery();
+            return rs.next() ? rs.getInt("rpm_points") : 0;
+        }
+    }
+
+    private double calculateCartTotal() {
+        double total = 0;
+        for (String item : cartItems) {
+            int quantity = cartQuantities.get(item);
+            String priceStr = item.split(" - ")[1];
+            double price = Double.parseDouble(priceStr.substring(1));
+            total += price * quantity;
+        }
+        return total;
+    }
+
+    // Helper methods for messages
+    private void showSuccessMessage(String message) {
+        JOptionPane.showMessageDialog(this, message, "Success", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void showErrorMessage(String message) {
+        JOptionPane.showMessageDialog(this, message, "Error", JOptionPane.ERROR_MESSAGE);
+    }
+
+    private void showInformationMessage(String message) {
+        JOptionPane.showMessageDialog(this, message, "Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
-            new menu().setVisible(true);
+            new menu().setVisible(true); // Test without login
         });
     }
 }

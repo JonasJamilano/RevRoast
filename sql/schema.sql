@@ -1,15 +1,15 @@
 -- Create the database
 CREATE DATABASE IF NOT EXISTS revandroast;
 USE revandroast;
-
--- Users table
+-- Users Table
 CREATE TABLE users (
-    user_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    password VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'staff', 'customer') DEFAULT 'customer',
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+user_id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100) NOT NULL,
+email VARCHAR(100) UNIQUE NOT NULL,
+password VARCHAR(255) NOT NULL,
+role ENUM('admin', 'staff', 'customer') DEFAULT 'customer',
+rpm_points INT DEFAULT 0,  -- Nullable with default 0
+created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
 -- Currencies table

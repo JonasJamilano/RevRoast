@@ -1,27 +1,38 @@
 import java.awt.*;
 import javax.swing.*;
+import java.io.File;
 
 public class home extends JFrame {
+    private Integer currentUserId;
+    private String currentUsername;
 
     public home() {
-        this(null);
+        this(null, null); // Guest constructor
     }
 
     public home(String username) {
+        this(username, null); // For backward compatibility
+    }
+
+    public home(String username, Integer userId) {
+        this.currentUserId = userId;
+        this.currentUsername = username;
+
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
         } catch (Exception e) {
             e.printStackTrace();
         }
+
         setTitle("Rev & Roast - Home");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        JPanel mainPanel = new BackgroundPanel("f1bg.jpg");
+        JPanel mainPanel = new BackgroundPanel("src/f1bg.jpg");
         mainPanel.setLayout(new BorderLayout());
 
-        // HEADER: Title and username at the top
+        // Header Panel
         JPanel headerPanel = new JPanel(new BorderLayout());
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
@@ -31,16 +42,32 @@ public class home extends JFrame {
         title.setForeground(new Color(252, 65, 17));
         headerPanel.add(title, BorderLayout.WEST);
 
-        if (username != null) {
-            JLabel welcomeLabel = new JLabel("Welcome, " + username + "!");
+        // User Info Panel
+        JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        userPanel.setOpaque(false);
+
+        if (currentUsername != null) {
+            JLabel welcomeLabel = new JLabel("Welcome, " + currentUsername + "!");
             welcomeLabel.setFont(new Font("Poppins", Font.PLAIN, 16));
             welcomeLabel.setForeground(Color.RED);
-            headerPanel.add(welcomeLabel, BorderLayout.EAST);
+            userPanel.add(welcomeLabel);
+
+            JButton logoutBtn = new JButton("Logout");
+            logoutBtn.setFont(new Font("Poppins", Font.PLAIN, 12));
+            logoutBtn.setBackground(new Color(252, 65, 17));
+            logoutBtn.setForeground(Color.WHITE);
+            logoutBtn.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+            logoutBtn.addActionListener(e -> {
+                new home();
+                dispose();
+            });
+            userPanel.add(logoutBtn);
         }
+        headerPanel.add(userPanel, BorderLayout.EAST);
 
         mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-        // CENTER: Main buttons
+        // Button Panel
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
@@ -54,7 +81,7 @@ public class home extends JFrame {
         buttonPanel.add(cartBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        if (username == null) {
+        if (currentUsername == null) {
             JButton loginBtn = createStyledButton("Login");
             JButton registerBtn = createStyledButton("Register");
 
@@ -75,7 +102,7 @@ public class home extends JFrame {
 
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
 
-        // FOOTER
+        // Footer
         JLabel footer = new JLabel("© 2025 Rev & Roast", SwingConstants.CENTER);
         footer.setForeground(Color.LIGHT_GRAY);
         footer.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
@@ -83,15 +110,44 @@ public class home extends JFrame {
 
         add(mainPanel);
 
-        // Button actions
+        // Fixed Browse Menu button action
         browseBtn.addActionListener(e -> {
-            new menu();
-            dispose();
+            try {
+                // Ensure the current frame is disposed properly
+                EventQueue.invokeLater(() -> {
+                    if (currentUserId != null) {
+                        new menu(currentUserId).setVisible(true);
+                    } else {
+                        new menu().setVisible(true);
+                    }
+                    dispose();
+                });
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this,
+                        "Error opening menu: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
+                ex.printStackTrace();
+            }
         });
 
         cartBtn.addActionListener(e -> {
-            new cart();
-            dispose();
+            if (currentUserId != null) {
+                JOptionPane.showMessageDialog(this,
+                        "Cart feature coming soon!",
+                        "Info",
+                        JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                int response = JOptionPane.showConfirmDialog(this,
+                        "You need to login to view your cart. Login now?",
+                        "Login Required",
+                        JOptionPane.YES_NO_OPTION);
+
+                if (response == JOptionPane.YES_OPTION) {
+                    new login();
+                    dispose();
+                }
+            }
         });
 
         setVisible(true);
@@ -101,10 +157,20 @@ public class home extends JFrame {
         JButton btn = new JButton(text);
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn.setMaximumSize(new Dimension(200, 40));
-        btn.setBackground(Color.RED);
+        btn.setBackground(new Color(252, 65, 17));
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setFont(new Font("Poppins", Font.BOLD, 14));
+
+        btn.addMouseListener(new java.awt.event.MouseAdapter() {
+            public void mouseEntered(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(252, 40, 40));
+            }
+            public void mouseExited(java.awt.event.MouseEvent evt) {
+                btn.setBackground(new Color(252, 65, 17));
+            }
+        });
+
         return btn;
     }
 
@@ -112,18 +178,35 @@ public class home extends JFrame {
         private Image backgroundImage;
 
         public BackgroundPanel(String fileName) {
-            backgroundImage = new ImageIcon(getClass().getClassLoader().getResource(fileName)).getImage();
-
+            try {
+                backgroundImage = new ImageIcon(fileName).getImage();
+                if (backgroundImage == null) {
+                    setBackground(new Color(30, 30, 30));
+                }
+            } catch (Exception e) {
+                setBackground(new Color(30, 30, 30));
+            }
         }
 
         @Override
         protected void paintComponent(Graphics g) {
             super.paintComponent(g);
-            g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+            if (backgroundImage != null) {
+                g.drawImage(backgroundImage, 0, 0, getWidth(), getHeight(), this);
+            }
         }
     }
 
     public static void main(String[] args) {
-        new home(); // launch without login
+        EventQueue.invokeLater(() -> {
+            try {
+                new home().setVisible(true);
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(null,
+                        "Failed to start application: " + e.getMessage(),
+                        "Fatal Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 }
