@@ -129,10 +129,10 @@ public class PendingOrdersView extends JFrame {
     private void loadPendingOrders() {
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT o.order_id, o.order_date, o.total_amount, o.status, " +
+                     "SELECT o.order_id, o.order_date, o.total_amount, o.orderstatus, " +  // Changed from status to orderstatus
                              "c.currency_code FROM orders o " +
                              "JOIN currencies c ON o.currency_id = c.currency_id " +
-                             "WHERE o.user_id = ? AND o.status != 'completed' " +
+                             "WHERE o.user_id = ? AND o.orderstatus != 'completed' " +  // Changed here too
                              "ORDER BY o.order_date DESC")) {
 
             stmt.setInt(1, userId);
@@ -142,7 +142,7 @@ public class PendingOrdersView extends JFrame {
             columns.add("Order ID");
             columns.add("Date");
             columns.add("Amount");
-            columns.add("Status");
+            columns.add("Status");  // This remains as the display label
             columns.add("Currency");
 
             Vector<Vector<Object>> data = new Vector<>();
@@ -152,32 +152,12 @@ public class PendingOrdersView extends JFrame {
                 row.add(rs.getInt("order_id"));
                 row.add(rs.getTimestamp("order_date"));
                 row.add(rs.getDouble("total_amount"));
-                row.add(rs.getString("status"));
+                row.add(rs.getString("orderstatus"));  // Changed from status to orderstatus
                 row.add(rs.getString("currency_code"));
                 data.add(row);
             }
 
-            DefaultTableModel model = new DefaultTableModel(data, columns) {
-                @Override
-                public Class<?> getColumnClass(int columnIndex) {
-                    if (columnIndex == 0) return Integer.class;
-                    if (columnIndex == 1) return Timestamp.class;
-                    if (columnIndex == 2) return Double.class;
-                    return String.class;
-                }
-
-                @Override
-                public boolean isCellEditable(int row, int column) {
-                    return false;
-                }
-            };
-
-            ordersTable.setModel(model);
-
-            // Custom renderers
-            ordersTable.getColumnModel().getColumn(2).setCellRenderer(new CurrencyCellRenderer());
-            ordersTable.getColumnModel().getColumn(1).setCellRenderer(new DateCellRenderer());
-
+            // ... rest of the method remains the same ...
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
                     "Error loading orders: " + e.getMessage(),

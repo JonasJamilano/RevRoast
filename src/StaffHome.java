@@ -69,7 +69,7 @@ public class StaffHome extends JFrame {
 
         JButton productManagementBtn = createStyledButton("Product Management");
         JButton transactionLogBtn = createStyledButton("Transaction Log");
-        JButton inventoryAuditBtn = createStyledButton("Inventory Audit");
+        JButton processOrdersBtn = createStyledButton("Process Orders");  // Changed from Inventory Audit
         JButton logoutBtn = createStyledButton("Logout");
 
         // Add buttons with spacing
@@ -77,14 +77,14 @@ public class StaffHome extends JFrame {
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         buttonPanel.add(transactionLogBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        buttonPanel.add(inventoryAuditBtn);
+        buttonPanel.add(processOrdersBtn);  // Changed from inventoryAuditBtn
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         buttonPanel.add(logoutBtn);
 
         // Add action listeners with error handling
         productManagementBtn.addActionListener(e -> openWindow(new ProductManagement(username)));
         transactionLogBtn.addActionListener(e -> openWindow(new TransactionLog(username)));
-        inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username)));
+        processOrdersBtn.addActionListener(e -> openWindow(new ProcessOrders(username)));  // Changed to ProcessOrders
         logoutBtn.addActionListener(e -> {
             dispose();
             new login();

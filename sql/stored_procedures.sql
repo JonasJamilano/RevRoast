@@ -15,16 +15,15 @@ END IF;
 END //
 
 -- 2. complete_order for STAFF
-DELIMITER //
 CREATE PROCEDURE complete_order(
-    IN p_user_id INT,
-    IN p_currency_id INT,
-    IN p_payment_method VARCHAR(50),
-    IN p_total_amount DECIMAL(10,2),
-    OUT p_order_id INT,
-    OUT p_rpm_points INT
+    IN p_order_id INT,
+    IN p_staff_id INT
 )
 BEGIN
+    DECLARE v_user_id INT;
+    DECLARE v_total_amount DECIMAL(10,2);
+    DECLARE v_rpm_points INT;
+
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
 BEGIN
 ROLLBACK;
@@ -33,22 +32,48 @@ END;
 
 START TRANSACTION;
 
-INSERT INTO orders (user_id, total_amount, currency_id)
-VALUES (p_user_id, p_total_amount, p_currency_id);
+-- Get user_id and total_amount from the order
+SELECT user_id, total_amount
+INTO v_user_id, v_total_amount
+FROM orders
+WHERE order_id = p_order_id;
 
-SET p_order_id = LAST_INSERT_ID();
+-- Calculate RPM points (1 point per whole peso)
+SET v_rpm_points = FLOOR(v_total_amount);
 
+    -- Update order status to completed with timestamp and staff who completed it
+UPDATE orders
+SET orderstatus = 'completed',
+    completed_at = CURRENT_TIMESTAMP,
+    completed_by = p_staff_id,
+    updated_at = CURRENT_TIMESTAMP
+WHERE order_id = p_order_id;
 
-    SET p_rpm_points = FLOOR(p_total_amount);
-
+-- Update user's RPM points
 UPDATE users
-SET rpm_points = rpm_points + p_rpm_points
-WHERE user_id = p_user_id;
+SET rpm_points = rpm_points + v_rpm_points
+WHERE user_id = v_user_id;
 
-INSERT INTO transaction_log (order_id, payment_method, payment_status, amount, rpm_points_earned)
-VALUES (p_order_id, p_payment_method, 'completed', p_total_amount, p_rpm_points);
+-- Log the completed transaction (without processed_by since column doesn't exist)
+INSERT INTO transaction_log (
+    order_id,
+    payment_method,
+    payment_status,
+    amount,
+    rpm_points_earned
+)
+SELECT
+    o.order_id,
+    o.payment_method,
+    'completed',
+    o.total_amount,
+    v_rpm_points
+FROM orders o
+WHERE o.order_id = p_order_id;
+
 COMMIT;
 END //
+
 DELIMITER ;
 
 -- 3. update_product_stock for STAFF
@@ -115,6 +140,7 @@ END;
 
 START TRANSACTION;
 
+-- Insert the order with 'pending' status
 INSERT INTO orders (
     user_id,
     currency_id,
@@ -122,7 +148,7 @@ INSERT INTO orders (
     order_type,
     special_instructions,
     total_amount,
-    orderstatus
+    status
 )
 VALUES (
            p_user_id,
@@ -131,12 +157,13 @@ VALUES (
            p_order_type,
            p_special_instructions,
            p_total_amount,
-           'processing'
+           'pending'
        );
 
 SET p_order_id = LAST_INSERT_ID();
     SET p_rpm_points = FLOOR(p_total_amount);
 
+    -- Record the transaction with 'pending' status
 INSERT INTO transaction_log (
     order_id,
     payment_method,
