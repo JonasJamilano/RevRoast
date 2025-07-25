@@ -42,6 +42,16 @@ CREATE TABLE orders (
     FOREIGN KEY (currency_id) REFERENCES currencies(currency_id)
 );
 
+-- Alter Table Orders
+ALTER TABLE orders
+ADD COLUMN orderstatus ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending',
+ADD COLUMN payment_method ENUM('cash', 'credit_card', 'gcash') NULL,
+ADD COLUMN order_type ENUM('pickup', 'delivery') NULL,
+ADD COLUMN special_instructions TEXT NULL,
+ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD CONSTRAINT fk_completed_by FOREIGN KEY (completed_by) REFERENCES users(user_id);
+
 -- Order items table
 CREATE TABLE order_items (
     order_item_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -63,4 +73,16 @@ CREATE TABLE transaction_log (
     rpm_points_earned INT DEFAULT 0,
     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(order_id)
+);
+
+-- Inventory audit (staff changes)
+CREATE TABLE inventory_audit (
+audit_id INT AUTO_INCREMENT PRIMARY KEY,
+product_id INT NOT NULL,
+staff_id INT NOT NULL,
+old_quantity INT,
+new_quantity INT,
+change_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+FOREIGN KEY (product_id) REFERENCES products(product_id),
+FOREIGN KEY (staff_id) REFERENCES users(user_id)
 );

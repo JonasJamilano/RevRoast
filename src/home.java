@@ -1,10 +1,12 @@
 import java.awt.*;
 import javax.swing.*;
 import java.io.File;
+import java.sql.*;
 
 public class home extends JFrame {
     private Integer currentUserId;
     private String currentUsername;
+    private String customerName; // Added to store customer's actual name
 
     public home() {
         this(null, null); // Guest constructor
@@ -17,6 +19,11 @@ public class home extends JFrame {
     public home(String username, Integer userId) {
         this.currentUserId = userId;
         this.currentUsername = username;
+
+        // Fetch customer name if logged in
+        if (userId != null) {
+            this.customerName = getCustomerName(userId);
+        }
 
         try {
             UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
@@ -46,8 +53,8 @@ public class home extends JFrame {
         JPanel userPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         userPanel.setOpaque(false);
 
-        if (currentUsername != null) {
-            JLabel welcomeLabel = new JLabel("Welcome, " + currentUsername + "!");
+        if (currentUsername != null && customerName != null) {
+            JLabel welcomeLabel = new JLabel("Welcome, " + customerName + "!"); // Use customerName instead of username
             welcomeLabel.setFont(new Font("Poppins", Font.PLAIN, 16));
             welcomeLabel.setForeground(Color.RED);
             userPanel.add(welcomeLabel);
@@ -74,11 +81,7 @@ public class home extends JFrame {
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(80, 300, 50, 300));
 
         JButton browseBtn = createStyledButton("Browse Menu");
-        JButton cartBtn = createStyledButton("View Cart");
-
         buttonPanel.add(browseBtn);
-        buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        buttonPanel.add(cartBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
 
         if (currentUsername == null) {
@@ -98,6 +101,24 @@ public class home extends JFrame {
                 new register();
                 dispose();
             });
+        } else {
+            // Only show order-related buttons to logged-in users
+            JButton pendingOrdersBtn = createStyledButton("Pending Orders");
+            JButton orderHistoryBtn = createStyledButton("Order History");
+
+            buttonPanel.add(pendingOrdersBtn);
+            buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
+            buttonPanel.add(orderHistoryBtn);
+
+            pendingOrdersBtn.addActionListener(e -> {
+                new PendingOrdersView(currentUserId).setVisible(true);
+                dispose();
+            });
+
+            orderHistoryBtn.addActionListener(e -> {
+                new OrderHistory(currentUserId).setVisible(true); // Changed from OrderDetailsView to OrderHistory
+                dispose();
+            });
         }
 
         mainPanel.add(buttonPanel, BorderLayout.CENTER);
@@ -110,10 +131,9 @@ public class home extends JFrame {
 
         add(mainPanel);
 
-        // Fixed Browse Menu button action
+        // Browse Menu button action
         browseBtn.addActionListener(e -> {
             try {
-                // Ensure the current frame is disposed properly
                 EventQueue.invokeLater(() -> {
                     if (currentUserId != null) {
                         new menu(currentUserId).setVisible(true);
@@ -131,26 +151,27 @@ public class home extends JFrame {
             }
         });
 
-        cartBtn.addActionListener(e -> {
-            if (currentUserId != null) {
-                JOptionPane.showMessageDialog(this,
-                        "Cart feature coming soon!",
-                        "Info",
-                        JOptionPane.INFORMATION_MESSAGE);
-            } else {
-                int response = JOptionPane.showConfirmDialog(this,
-                        "You need to login to view your cart. Login now?",
-                        "Login Required",
-                        JOptionPane.YES_NO_OPTION);
-
-                if (response == JOptionPane.YES_OPTION) {
-                    new login();
-                    dispose();
-                }
-            }
-        });
-
         setVisible(true);
+    }
+
+    // Method to fetch customer name from database
+    private String getCustomerName(int userId) {
+        try (Connection conn = DatabaseConnector.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(
+                     "SELECT name FROM customers WHERE user_id = ?")) {
+
+            stmt.setInt(1, userId);
+            ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                return rs.getString("name");
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            // Fallback to username if name not found
+            return currentUsername;
+        }
+        return currentUsername; // Fallback to username if name not found
     }
 
     private JButton createStyledButton(String text) {

@@ -4,6 +4,8 @@ import javax.swing.*;
 import java.sql.*;
 import javax.swing.border.*;
 import java.io.File;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 
 public class menu extends JFrame {
     // Custom Fonts
@@ -22,8 +24,7 @@ public class menu extends JFrame {
 
     // UI Components
     private JPanel menuPanel;
-    private JComboBox<String> currencyDropdown;
-    private String selectedCurrency = "PHP";
+    private String selectedCurrency;
     private Map<String, Double> exchangeRates;
     private java.util.List<String> cartItems;
     private Map<String, Integer> cartQuantities;
@@ -41,7 +42,50 @@ public class menu extends JFrame {
         initializeFonts();
         setupWindow();
         initializeData();
+
+        // Ask for currency first
+        selectedCurrency = showCurrencySelectionDialog();
+        if (selectedCurrency == null) {
+            selectedCurrency = "PHP"; // Default if canceled
+        }
+
         buildUI();
+    }
+
+    private String showCurrencySelectionDialog() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(PANEL_BG);
+        panel.setBorder(new EmptyBorder(15, 15, 15, 15));
+
+        JLabel title = new JLabel("SELECT CURRENCY");
+        title.setFont(FONT_HEADER.deriveFont(18f));
+        title.setForeground(Color.WHITE);
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        panel.add(title, BorderLayout.NORTH);
+
+        JComboBox<String> currencySelect = new JComboBox<>(new String[]{"PHP", "USD", "JPY"});
+        currencySelect.setFont(FONT_BODY);
+        currencySelect.setBackground(DARK_GRAY);
+        currencySelect.setForeground(Color.WHITE);
+        currencySelect.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+        JPanel centerPanel = new JPanel();
+        centerPanel.setBackground(PANEL_BG);
+        centerPanel.add(currencySelect);
+        panel.add(centerPanel, BorderLayout.CENTER);
+
+        int result = JOptionPane.showConfirmDialog(
+                null,
+                panel,
+                "Currency Selection",
+                JOptionPane.OK_CANCEL_OPTION,
+                JOptionPane.PLAIN_MESSAGE
+        );
+
+        if (result == JOptionPane.OK_OPTION) {
+            return (String) currencySelect.getSelectedItem();
+        }
+        return null;
     }
 
     private void initializeFonts() {
@@ -86,7 +130,7 @@ public class menu extends JFrame {
         exchangeRates = new HashMap<>();
         exchangeRates.put("PHP", 1.0);
         exchangeRates.put("USD", 0.018);
-        exchangeRates.put("YEN", 2.6);
+        exchangeRates.put("JPY", 2.6);
     }
 
     private void buildUI() {
@@ -111,34 +155,12 @@ public class menu extends JFrame {
                 new EmptyBorder(15, 25, 15, 25)
         ));
 
-        // Title
+        // Title only
         JLabel title = new JLabel("MENU");
         title.setFont(FONT_TITLE);
         title.setForeground(Color.WHITE);
         title.setHorizontalAlignment(SwingConstants.LEFT);
-
-        // Currency selector
-        currencyDropdown = new JComboBox<>(new String[]{"PHP", "USD", "YEN"});
-        currencyDropdown.setSelectedItem("PHP");
-        currencyDropdown.setFont(FONT_BODY);
-        currencyDropdown.setBackground(DARK_GRAY);
-        currencyDropdown.setForeground(Color.WHITE);
-        currencyDropdown.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        currencyDropdown.addActionListener(e -> {
-            selectedCurrency = (String) currencyDropdown.getSelectedItem();
-            updateMenuItems();
-        });
-
-        JPanel currencyPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
-        currencyPanel.setBackground(PANEL_BG);
-        JLabel currencyLabel = new JLabel("CURRENCY:");
-        currencyLabel.setFont(FONT_HEADER);
-        currencyLabel.setForeground(LIGHT_GRAY);
-        currencyPanel.add(currencyLabel);
-        currencyPanel.add(currencyDropdown);
-
         headerPanel.add(title, BorderLayout.WEST);
-        headerPanel.add(currencyPanel, BorderLayout.EAST);
 
         return headerPanel;
     }
@@ -246,7 +268,7 @@ public class menu extends JFrame {
         // Price and stock
         double convertedPrice = basePricePHP * exchangeRates.get(selectedCurrency);
         String currencySymbol = selectedCurrency.equals("USD") ? "$" :
-                selectedCurrency.equals("YEN") ? "¥" : "₱";
+                selectedCurrency.equals("JPY") ? "¥" : "₱";
         JLabel itemPrice = new JLabel(currencySymbol + String.format("%.2f", convertedPrice));
         itemPrice.setFont(FONT_PRICE);
         itemPrice.setForeground(RACING_RED);
@@ -377,92 +399,218 @@ public class menu extends JFrame {
             return;
         }
 
-        JPanel cartPanel = new JPanel(new BorderLayout());
-        cartPanel.setBackground(PANEL_BG);
-        cartPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
+        // Main container panel
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(PANEL_BG);
+        mainPanel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        JLabel title = new JLabel("YOUR ORDER");
-        title.setFont(FONT_HEADER.deriveFont(18f));
+        // 1. Header Panel
+        JPanel headerPanel = new JPanel(new BorderLayout());
+        headerPanel.setBackground(PANEL_BG);
+
+        JLabel title = new JLabel("ORDER SUMMARY");
+        title.setFont(FONT_HEADER.deriveFont(20f));
         title.setForeground(Color.WHITE);
-        title.setBorder(new EmptyBorder(0, 0, 10, 0));
-        cartPanel.add(title, BorderLayout.NORTH);
+        title.setBorder(new EmptyBorder(0, 0, 15, 0));
+        headerPanel.add(title, BorderLayout.NORTH);
 
-        JTextArea cartContent = new JTextArea();
-        cartContent.setEditable(false);
-        cartContent.setBackground(PANEL_BG);
-        cartContent.setForeground(Color.WHITE);
-        cartContent.setFont(FONT_BODY);
+        // Current user display
+        String userDisplay = currentUserId > 0 ? "Logged in as User #" + currentUserId : "Guest Checkout";
+        JLabel userLabel = new JLabel(userDisplay);
+        userLabel.setFont(FONT_BODY);
+        userLabel.setForeground(LIGHT_GRAY);
+        headerPanel.add(userLabel, BorderLayout.SOUTH);
 
-        StringBuilder cartText = new StringBuilder();
+        mainPanel.add(headerPanel, BorderLayout.NORTH);
+
+        // 2. Items Panel with scrollable table
+        String[] columnNames = {"Item", "Qty", "Price", "Subtotal"};
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
         double total = 0;
+        String currencySymbol = selectedCurrency.equals("USD") ? "$" :
+                selectedCurrency.equals("JPY") ? "¥" : "₱";
 
         for (String item : cartItems) {
             int quantity = cartQuantities.get(item);
             String itemName = item.split(" - ")[0];
             String priceStr = item.split(" - ")[1];
             double price = Double.parseDouble(priceStr.substring(1));
+            double subtotal = price * quantity;
+            total += subtotal;
 
-            cartText.append(String.format("%d × %-25s %s%6.2f\n",
-                    quantity,
+            model.addRow(new Object[]{
                     itemName,
-                    priceStr.charAt(0),
-                    price * quantity));
-
-            total += price * quantity;
+                    quantity,
+                    currencySymbol + String.format("%.2f", price),
+                    currencySymbol + String.format("%.2f", subtotal)
+            });
         }
 
-        cartText.append("\n");
-        cartText.append(String.format("%-30s %s%6.2f",
-                "TOTAL:",
-                cartItems.get(0).split(" - ")[1].charAt(0),
-                total));
+        JTable itemsTable = new JTable(model);
+        itemsTable.setFont(FONT_BODY);
+        itemsTable.setForeground(Color.WHITE);
+        itemsTable.setBackground(DARK_GRAY);
+        itemsTable.setGridColor(LIGHT_GRAY);
+        itemsTable.setRowHeight(25);
+        itemsTable.setShowGrid(true);
+        itemsTable.setSelectionBackground(RACING_RED);
+        itemsTable.getTableHeader().setFont(FONT_BUTTON);
+        itemsTable.getTableHeader().setBackground(DARK_GRAY);
+        itemsTable.getTableHeader().setForeground(Color.WHITE);
 
-        cartContent.setText(cartText.toString());
-        cartPanel.add(new JScrollPane(cartContent), BorderLayout.CENTER);
+        // Center align quantity and right align price columns
+        DefaultTableCellRenderer centerRenderer = new DefaultTableCellRenderer();
+        centerRenderer.setHorizontalAlignment(JLabel.CENTER);
+        itemsTable.getColumnModel().getColumn(1).setCellRenderer(centerRenderer);
 
-        // Payment options
-        JPanel paymentPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        paymentPanel.setBackground(PANEL_BG);
-        JLabel paymentLabel = new JLabel("Payment Method:");
-        paymentLabel.setFont(FONT_BODY);
-        paymentLabel.setForeground(Color.WHITE);
-        JComboBox<String> paymentOptions = new JComboBox<>(new String[]{"Cash", "Credit Card", "GCash"});
-        paymentPanel.add(paymentLabel);
-        paymentPanel.add(paymentOptions);
+        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
+        itemsTable.getColumnModel().getColumn(2).setCellRenderer(rightRenderer);
+        itemsTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
 
-        JPanel bottomPanel = new JPanel(new BorderLayout());
-        bottomPanel.add(paymentPanel, BorderLayout.NORTH);
-        bottomPanel.add(cartPanel, BorderLayout.CENTER);
+        JScrollPane tableScroll = new JScrollPane(itemsTable);
+        tableScroll.setBorder(new LineBorder(LIGHT_GRAY, 1));
+        tableScroll.setBackground(PANEL_BG);
 
-        Object[] options = {"CHECKOUT", "CONTINUE SHOPPING"};
-        int choice = JOptionPane.showOptionDialog(
-                this,
-                bottomPanel,
-                "",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                options,
-                options[0]
-        );
+        // 3. Total Panel
+        JPanel totalPanel = new JPanel(new BorderLayout());
+        totalPanel.setBackground(PANEL_BG);
+        totalPanel.setBorder(new EmptyBorder(10, 0, 10, 0));
 
-        if (choice == JOptionPane.YES_OPTION) {
-            processCheckout(paymentOptions);
-        }
+        JLabel totalLabel = new JLabel("TOTAL: " + currencySymbol + String.format("%.2f", total));
+        totalLabel.setFont(FONT_PRICE.deriveFont(18f));
+        totalLabel.setForeground(RACING_RED);
+        totalLabel.setHorizontalAlignment(SwingConstants.RIGHT);
+        totalPanel.add(totalLabel, BorderLayout.EAST);
+
+        // 4. Options Panel
+        JPanel optionsPanel = new JPanel();
+        optionsPanel.setLayout(new BoxLayout(optionsPanel, BoxLayout.Y_AXIS));
+        optionsPanel.setBackground(PANEL_BG);
+        optionsPanel.setBorder(new CompoundBorder(
+                new MatteBorder(1, 0, 0, 0, LIGHT_GRAY),
+                new EmptyBorder(15, 0, 0, 0)
+        ));
+
+        // Payment Method
+        JPanel paymentPanel = createOptionPanel("Payment Method:",
+                new JComboBox<>(new String[]{"Cash", "Credit Card", "GCash"}));
+
+        // Order Type
+        JPanel orderTypePanel = createOptionPanel("Order Type:",
+                new JComboBox<>(new String[]{"Pickup", "Delivery"}));
+
+        // Special Instructions
+        JPanel instructionsPanel = new JPanel(new BorderLayout(5, 5));
+        instructionsPanel.setBackground(PANEL_BG);
+
+        JLabel instructionsLabel = new JLabel("Special Instructions:");
+        instructionsLabel.setFont(FONT_BODY);
+        instructionsLabel.setForeground(Color.WHITE);
+
+        JTextArea instructionsField = new JTextArea(3, 20);
+        instructionsField.setFont(FONT_BODY);
+        instructionsField.setBackground(DARK_GRAY);
+        instructionsField.setForeground(Color.WHITE);
+        instructionsField.setLineWrap(true);
+        instructionsField.setWrapStyleWord(true);
+        instructionsField.setBorder(new CompoundBorder(
+                new LineBorder(LIGHT_GRAY, 1),
+                new EmptyBorder(5, 5, 5, 5)
+        ));
+
+        instructionsPanel.add(instructionsLabel, BorderLayout.NORTH);
+        instructionsPanel.add(new JScrollPane(instructionsField), BorderLayout.CENTER);
+
+        optionsPanel.add(paymentPanel);
+        optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        optionsPanel.add(orderTypePanel);
+        optionsPanel.add(Box.createRigidArea(new Dimension(0, 10)));
+        optionsPanel.add(instructionsPanel);
+
+        // 5. Button Panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
+        buttonPanel.setBackground(PANEL_BG);
+        buttonPanel.setBorder(new EmptyBorder(15, 0, 0, 0));
+
+        JButton cancelBtn = createMinimalButton("CANCEL", DARK_GRAY);
+        cancelBtn.addActionListener(e -> {
+            ((Window)SwingUtilities.getRoot(cancelBtn)).dispose();
+        });
+
+        JButton checkoutBtn = createMinimalButton("PROCEED TO CHECKOUT", RACING_RED);
+        checkoutBtn.addActionListener(e -> {
+            JComboBox<String> paymentCombo = (JComboBox<String>) paymentPanel.getComponent(1);
+            JComboBox<String> orderTypeCombo = (JComboBox<String>) orderTypePanel.getComponent(1);
+            processCheckout(paymentCombo, orderTypeCombo, instructionsField);
+            ((Window)SwingUtilities.getRoot(checkoutBtn)).dispose();
+        });
+
+        buttonPanel.add(cancelBtn);
+        buttonPanel.add(checkoutBtn);
+
+        // Assembly
+        mainPanel.add(tableScroll, BorderLayout.CENTER);
+        mainPanel.add(totalPanel, BorderLayout.SOUTH);
+
+        JPanel bottomContainer = new JPanel(new BorderLayout());
+        bottomContainer.setBackground(PANEL_BG);
+        bottomContainer.add(optionsPanel, BorderLayout.CENTER);
+        bottomContainer.add(buttonPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(bottomContainer, BorderLayout.SOUTH);
+
+        // Create custom dialog
+        JDialog checkoutDialog = new JDialog(this, "Checkout", true);
+        checkoutDialog.setContentPane(mainPanel);
+        checkoutDialog.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
+        checkoutDialog.pack();
+        checkoutDialog.setSize(600, 700);
+        checkoutDialog.setLocationRelativeTo(this);
+        checkoutDialog.setVisible(true);
     }
 
-    private void processCheckout(JComboBox<String> paymentOptions) {
-        if (currentUserId <= 0) {
-            int response = JOptionPane.showConfirmDialog(
-                    this,
-                    "You need to login to checkout. Login now?",
-                    "Login Required",
-                    JOptionPane.YES_NO_OPTION);
+    private JPanel createOptionPanel(String labelText, JComponent component) {
+        JPanel panel = new JPanel(new BorderLayout(10, 0));
+        panel.setBackground(PANEL_BG);
 
-            if (response == JOptionPane.YES_OPTION) {
-                new login();
-                dispose();
-            }
+        JLabel label = new JLabel(labelText);
+        label.setFont(FONT_BODY);
+        label.setForeground(Color.WHITE);
+
+        component.setFont(FONT_BODY);
+        component.setBackground(DARK_GRAY);
+        component.setForeground(Color.WHITE);
+        if (component instanceof JComboBox) {
+            ((JComboBox<?>) component).setRenderer(new DefaultListCellRenderer() {
+                @Override
+                public Component getListCellRendererComponent(JList<?> list, Object value, int index,
+                                                              boolean isSelected, boolean cellHasFocus) {
+                    super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                    setBackground(isSelected ? RACING_RED : DARK_GRAY);
+                    setForeground(Color.WHITE);
+                    return this;
+                }
+            });
+        }
+
+        panel.add(label, BorderLayout.WEST);
+        panel.add(component, BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    private void processCheckout(JComboBox<String> paymentOptions, JComboBox<String> orderTypeOptions,
+                                 JTextArea instructionsField) {
+        // 1. Validation Phase
+        if (currentUserId <= 0) {
+            handleGuestCheckout();
             return;
         }
 
@@ -471,52 +619,158 @@ public class menu extends JFrame {
             return;
         }
 
+        // 2. Confirmation Dialog with Order Summary
+        if (!confirmOrderDetails(paymentOptions, orderTypeOptions)) {
+            return;
+        }
+
+        // 3. Payment Processing (simulated)
+        if (!processPayment(paymentOptions)) {
+            return;
+        }
+
+        // 4. Database Transaction
+        OrderResult orderResult = processOrderTransaction(
+                paymentOptions,
+                orderTypeOptions,
+                instructionsField
+        );
+
+        if (orderResult != null && orderResult.success) {
+            // 5. Success Handling
+            handleSuccessfulCheckout(orderResult);
+        }
+    }
+
+    private void handleGuestCheckout() {
+        int response = JOptionPane.showConfirmDialog(
+                this,
+                "You need to login to checkout. Login now?",
+                "Login Required",
+                JOptionPane.YES_NO_OPTION);
+
+        if (response == JOptionPane.YES_OPTION) {
+            new login();
+            dispose();
+        }
+    }
+
+    private boolean confirmOrderDetails(JComboBox<String> paymentOptions, JComboBox<String> orderTypeOptions) {
+        String paymentMethod = (String) paymentOptions.getSelectedItem();
+        String orderType = (String) orderTypeOptions.getSelectedItem();
+        double total = calculateCartTotal();
+        String currencySymbol = selectedCurrency.equals("USD") ? "$" :
+                selectedCurrency.equals("JPY") ? "¥" : "₱";
+
+        String message = String.format(
+                "<html><div style='width: 300px;'>" +
+                        "<h3>Confirm Your Order</h3>" +
+                        "<p><b>Payment Method:</b> %s</p>" +
+                        "<p><b>Order Type:</b> %s</p>" +
+                        "<p><b>Total Amount:</b> %s%.2f</p>" +
+                        "<p>Proceed with checkout?</p>" +
+                        "</div></html>",
+                paymentMethod, orderType, currencySymbol, total
+        );
+
+        int confirm = JOptionPane.showConfirmDialog(
+                this,
+                message,
+                "Confirm Order",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        return confirm == JOptionPane.YES_OPTION;
+    }
+
+    private boolean processPayment(JComboBox<String> paymentOptions) {
+        String paymentMethod = (String) paymentOptions.getSelectedItem();
+
+        // Simulate payment processing
+        if (paymentMethod.equals("Credit Card")) {
+            // Show credit card input dialog
+            JPanel cardPanel = new JPanel(new GridLayout(0, 1, 5, 5));
+            cardPanel.setBorder(new EmptyBorder(10, 10, 10, 10));
+
+            JTextField cardNumber = new JTextField();
+            JTextField expiry = new JTextField();
+            JTextField cvv = new JTextField();
+
+            cardPanel.add(new JLabel("Card Number:"));
+            cardPanel.add(cardNumber);
+            cardPanel.add(new JLabel("Expiry Date (MM/YY):"));
+            cardPanel.add(expiry);
+            cardPanel.add(new JLabel("CVV:"));
+            cardPanel.add(cvv);
+
+            int result = JOptionPane.showConfirmDialog(
+                    this,
+                    cardPanel,
+                    "Enter Card Details",
+                    JOptionPane.OK_CANCEL_OPTION,
+                    JOptionPane.PLAIN_MESSAGE
+            );
+
+            if (result != JOptionPane.OK_OPTION) {
+                return false;
+            }
+
+            // Simple validation
+            if (cardNumber.getText().trim().isEmpty() ||
+                    expiry.getText().trim().isEmpty() ||
+                    cvv.getText().trim().isEmpty()) {
+                showErrorMessage("Please fill in all card details");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private OrderResult processOrderTransaction(JComboBox<String> paymentOptions,
+                                                JComboBox<String> orderTypeOptions, JTextArea instructionsField) {
         // Calculate total amount from cart
         double totalAmount = calculateCartTotal();
         String paymentMethod = (String) paymentOptions.getSelectedItem();
+        String orderType = (String) orderTypeOptions.getSelectedItem();
+        String specialInstructions = instructionsField.getText();
         int currencyId;
 
         try {
             currencyId = getCurrencyIdByCode(selectedCurrency);
         } catch (SQLException ex) {
             showErrorMessage("Error getting currency: " + ex.getMessage());
-            return;
+            return null;
         }
 
         try (Connection conn = DatabaseConnector.getConnection()) {
             conn.setAutoCommit(false); // Start transaction
 
             try {
-                // 1. Create the order and get order ID
+                // 1. Create the order with 'processing' status
                 int orderId;
                 int rpmPointsEarned;
-                int totalUserPoints;
 
                 try (CallableStatement orderStmt = conn.prepareCall(
-                        "{call complete_order(?, ?, ?, ?, ?, ?)}")) {
+                        "{call send_order(?, ?, ?, ?, ?, ?, ?, ?)}")) {
 
                     orderStmt.setInt(1, currentUserId);
                     orderStmt.setInt(2, currencyId);
                     orderStmt.setString(3, paymentMethod);
-                    orderStmt.setDouble(4, totalAmount);
-                    orderStmt.registerOutParameter(5, Types.INTEGER); // order_id
-                    orderStmt.registerOutParameter(6, Types.INTEGER); // rpm_points_earned
+                    orderStmt.setString(4, orderType);
+                    orderStmt.setString(5, specialInstructions);
+                    orderStmt.setDouble(6, totalAmount);
+                    orderStmt.registerOutParameter(7, Types.INTEGER); // order_id
+                    orderStmt.registerOutParameter(8, Types.INTEGER); // rpm_points_earned
 
                     orderStmt.execute();
 
-                    orderId = orderStmt.getInt(5);
-                    rpmPointsEarned = orderStmt.getInt(6);
+                    orderId = orderStmt.getInt(7);
+                    rpmPointsEarned = orderStmt.getInt(8);
                 }
 
-                // 2. Get current total points after update
-                try (PreparedStatement pointsStmt = conn.prepareStatement(
-                        "SELECT rpm_points FROM users WHERE user_id = ?")) {
-                    pointsStmt.setInt(1, currentUserId);
-                    ResultSet rs = pointsStmt.executeQuery();
-                    totalUserPoints = rs.next() ? rs.getInt("rpm_points") : 0;
-                }
-
-                // 3. Insert all order items
+                // 2. Insert all order items
                 try (PreparedStatement itemStmt = conn.prepareStatement(
                         "INSERT INTO order_items (order_id, product_id, quantity, price) " +
                                 "VALUES (?, ?, ?, (SELECT price FROM products WHERE product_id = ?))")) {
@@ -535,7 +789,7 @@ public class menu extends JFrame {
                     itemStmt.executeBatch();
                 }
 
-                // 4. Update product stocks
+                // 3. Update product stocks (reserve them)
                 try (PreparedStatement stockStmt = conn.prepareStatement(
                         "UPDATE products SET stock_quantity = stock_quantity - ? " +
                                 "WHERE product_id = ?")) {
@@ -554,20 +808,7 @@ public class menu extends JFrame {
 
                 conn.commit(); // Commit transaction if all succeeded
 
-                // Show success message with points information
-                showSuccessMessage(
-                        "Order #" + orderId + " completed!\n" +
-                                "Total: " + String.format("%.2f", totalAmount) + "\n" +
-                                "Earned " + rpmPointsEarned + " RPM points\n" +
-                                "Your total points: " + totalUserPoints);
-
-                // Clear cart
-                cartItems.clear();
-                cartQuantities.clear();
-                updateCartButtonCount();
-
-                // Refresh menu to update stock quantities
-                updateMenuItems();
+                return new OrderResult(true, orderId, rpmPointsEarned, totalAmount);
 
             } catch (SQLException ex) {
                 try {
@@ -577,6 +818,7 @@ public class menu extends JFrame {
                 }
                 showErrorMessage("Checkout failed: " + ex.getMessage());
                 ex.printStackTrace();
+                return new OrderResult(false, -1, 0, 0);
             } finally {
                 try {
                     conn.setAutoCommit(true);
@@ -588,16 +830,43 @@ public class menu extends JFrame {
         } catch (SQLException ex) {
             showErrorMessage("Database connection error: " + ex.getMessage());
             ex.printStackTrace();
+            return new OrderResult(false, -1, 0, 0);
         }
     }
 
-    private int getCurrentUserPoints(Connection conn) throws SQLException {
-        try (PreparedStatement stmt = conn.prepareStatement(
-                "SELECT rpm_points FROM users WHERE user_id = ?")) {
-            stmt.setInt(1, currentUserId);
-            ResultSet rs = stmt.executeQuery();
-            return rs.next() ? rs.getInt("rpm_points") : 0;
-        }
+    private void handleSuccessfulCheckout(OrderResult orderResult) {
+        // Clear cart
+        cartItems.clear();
+        cartQuantities.clear();
+        updateCartButtonCount();
+
+        // Refresh menu to update stock quantities
+        updateMenuItems();
+
+        // Show success message
+        String currencySymbol = selectedCurrency.equals("USD") ? "$" :
+                selectedCurrency.equals("JPY") ? "¥" : "₱";
+
+        String message = String.format(
+                "<html><div style='width: 300px;'>" +
+                        "<h3>Order Confirmed!</h3>" +
+                        "<p><b>Order #:</b> %d</p>" +
+                        "<p><b>Total:</b> %s%.2f</p>" +
+                        "<p><b>Points Earned:</b> %d RPM points</p>" +
+                        "<p>Thank you for your order!</p>" +
+                        "</div></html>",
+                orderResult.orderId,
+                currencySymbol,
+                orderResult.totalAmount,
+                orderResult.rpmPointsEarned
+        );
+
+        JOptionPane.showMessageDialog(
+                this,
+                message,
+                "Order Successful",
+                JOptionPane.INFORMATION_MESSAGE
+        );
     }
 
     private double calculateCartTotal() {
@@ -622,6 +891,21 @@ public class menu extends JFrame {
 
     private void showInformationMessage(String message) {
         JOptionPane.showMessageDialog(this, message, "Info", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    // Helper class for order results
+    private class OrderResult {
+        boolean success;
+        int orderId;
+        int rpmPointsEarned;
+        double totalAmount;
+
+        public OrderResult(boolean success, int orderId, int rpmPointsEarned, double totalAmount) {
+            this.success = success;
+            this.orderId = orderId;
+            this.rpmPointsEarned = rpmPointsEarned;
+            this.totalAmount = totalAmount;
+        }
     }
 
     public static void main(String[] args) {

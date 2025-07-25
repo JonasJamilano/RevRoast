@@ -1,3 +1,4 @@
+-- 1. before_order_item_insert
 DELIMITER //
 CREATE TRIGGER before_order_item_insert
     BEFORE INSERT ON order_items
@@ -16,7 +17,7 @@ END IF;
 END //
 DELIMITER ;
 
-
+-- 2. after_transaction_log_insert
 DELIMITER //
 CREATE TRIGGER after_transaction_log_insert
     AFTER INSERT ON transaction_log
@@ -31,6 +32,7 @@ END IF;
 END //
 DELIMITER ;
 
+-- 3. after_product_price_update
 DELIMITER //
 CREATE TRIGGER after_product_price_update
     AFTER UPDATE ON products
