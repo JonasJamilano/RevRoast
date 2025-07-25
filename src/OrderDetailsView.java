@@ -15,6 +15,9 @@ public class OrderDetailsView extends JFrame {
     private Font FONT_HEADER;
 
     private int orderId;
+    private JPanel infoPanel;
+    private JTable itemsTable;
+    private DefaultTableModel itemsTableModel;
 
     public OrderDetailsView(int orderId) {
         this.orderId = orderId;
@@ -61,27 +64,40 @@ public class OrderDetailsView extends JFrame {
         title.setBorder(new EmptyBorder(0, 0, 15, 0));
         mainPanel.add(title, BorderLayout.NORTH);
 
-        // Order info panel
-        JPanel infoPanel = new JPanel(new GridLayout(0, 2, 10, 5));
+        // Initialize info panel with empty values
+        infoPanel = new JPanel(new GridLayout(0, 2, 10, 5));
         infoPanel.setBackground(PANEL_BG);
         infoPanel.setBorder(new EmptyBorder(0, 0, 15, 0));
 
-        addInfoRow(infoPanel, "Order Date:");
-        addInfoRow(infoPanel, "Status:");
-        addInfoRow(infoPanel, "Payment Method:");
-        addInfoRow(infoPanel, "Order Type:");
-        addInfoRow(infoPanel, "Total Amount:");
-        addInfoRow(infoPanel, "Currency:");
+        addInfoRow("Order Date:", "");
+        addInfoRow("Status:", "");
+        addInfoRow("Payment Method:", "");
+        addInfoRow("Order Type:", "");
+        addInfoRow("Total Amount:", "");
+        addInfoRow("Currency:", "");
 
         mainPanel.add(infoPanel, BorderLayout.CENTER);
 
-        // Items table
-        JTable itemsTable = new JTable();
+        // Initialize items table
+        itemsTableModel = new DefaultTableModel(
+                new Object[]{"Item", "Qty", "Price", "Subtotal"}, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 1) return Integer.class;
+                if (columnIndex == 2 || columnIndex == 3) return Double.class;
+                return String.class;
+            }
+        };
+
+        itemsTable = new JTable(itemsTableModel);
         itemsTable.setFont(FONT_BODY);
         itemsTable.setForeground(Color.WHITE);
         itemsTable.setBackground(DARK_GRAY);
         itemsTable.setGridColor(LIGHT_GRAY);
         itemsTable.setRowHeight(25);
+        itemsTable.getTableHeader().setFont(FONT_BODY);
+        itemsTable.getTableHeader().setBackground(DARK_GRAY);
+        itemsTable.getTableHeader().setForeground(Color.WHITE);
 
         JScrollPane tableScroll = new JScrollPane(itemsTable);
         tableScroll.setBorder(BorderFactory.createEmptyBorder());
@@ -92,21 +108,25 @@ public class OrderDetailsView extends JFrame {
         add(mainPanel);
     }
 
-    private void addInfoRow(JPanel panel, String label) {
+    private void addInfoRow(String label, String value) {
         JLabel lbl = new JLabel(label);
         lbl.setFont(FONT_BODY);
         lbl.setForeground(Color.WHITE);
-        panel.add(lbl);
+        infoPanel.add(lbl);
 
-        JLabel value = new JLabel();
-        value.setFont(FONT_BODY);
-        value.setForeground(Color.WHITE);
-        panel.add(value);
+        JLabel valueLbl = new JLabel(value);
+        valueLbl.setFont(FONT_BODY);
+        valueLbl.setForeground(Color.WHITE);
+        infoPanel.add(valueLbl);
+    }
+
+    private void updateInfoRow(int componentIndex, String value) {
+        if (infoPanel.getComponentCount() > componentIndex + 1) {
+            ((JLabel)infoPanel.getComponent(componentIndex + 1)).setText(value);
+        }
     }
 
     private void loadOrderDetails() {
-        String currencyCode = "";
-
         try (Connection conn = DatabaseConnector.getConnection()) {
             // Load order header info
             try (PreparedStatement stmt = conn.prepareStatement(
@@ -120,79 +140,63 @@ public class OrderDetailsView extends JFrame {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    JPanel infoPanel = (JPanel) ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.CENTER);
-                    infoPanel.removeAll();  // Clear all components
-                    infoPanel.setLayout(new GridLayout(0, 2, 10, 5));
-
-                    currencyCode = rs.getString("currency_code");
+                    String currencyCode = rs.getString("currency_code");
                     String currencySymbol = currencyCode.equals("USD") ? "$" :
                             currencyCode.equals("JPY") ? "¥" : "₱";
 
-                    addInfoRow(infoPanel, "Order Date:", rs.getTimestamp("order_date").toString());
-                    addInfoRow(infoPanel, "Status:", rs.getString("status"));
-                    addInfoRow(infoPanel, "Payment Method:", rs.getString("payment_method"));
-                    addInfoRow(infoPanel, "Order Type:", rs.getString("order_type"));
-                    addInfoRow(infoPanel, "Total Amount:", currencySymbol + String.format("%.2f", rs.getDouble("total_amount")));
-                    addInfoRow(infoPanel, "Currency:", currencyCode);
+                    // Update info panel labels
+                    updateInfoRow(0, rs.getTimestamp("order_date").toString());
+                    updateInfoRow(2, rs.getString("status"));
+                    updateInfoRow(4, rs.getString("payment_method"));
+                    updateInfoRow(6, rs.getString("order_type"));
+                    updateInfoRow(8, currencySymbol + String.format("%.2f", rs.getDouble("total_amount")));
+                    updateInfoRow(10, currencyCode);
 
+                    // Add special instructions if present
                     String instructions = rs.getString("special_instructions");
                     if (instructions != null && !instructions.isEmpty()) {
-                        addInfoRow(infoPanel, "Instructions:", instructions);
+                        if (infoPanel.getComponentCount() <= 12) {
+                            addInfoRow("Instructions:", instructions);
+                        } else {
+                            updateInfoRow(12, instructions);
+                        }
                     }
 
-                    infoPanel.revalidate();
-                    infoPanel.repaint();
-                }
-            }
+                    // Load order items
+                    itemsTableModel.setRowCount(0); // Clear existing rows
+                    try (PreparedStatement itemsStmt = conn.prepareStatement(
+                            "SELECT p.name, oi.quantity, oi.price " +
+                                    "FROM order_items oi " +
+                                    "JOIN products p ON oi.product_id = p.product_id " +
+                                    "WHERE oi.order_id = ?")) {
 
-            // Load order items
-            try (PreparedStatement stmt = conn.prepareStatement(
-                    "SELECT p.name, oi.quantity, oi.price " +
-                            "FROM order_items oi " +
-                            "JOIN products p ON oi.product_id = p.product_id " +
-                            "WHERE oi.order_id = ?")) {
+                        itemsStmt.setInt(1, orderId);
+                        ResultSet itemsRs = itemsStmt.executeQuery();
 
-                stmt.setInt(1, orderId);
-                ResultSet rs = stmt.executeQuery();
-
-                Vector<String> columns = new Vector<>();
-                columns.add("Item");
-                columns.add("Qty");
-                columns.add("Price");
-                columns.add("Subtotal");
-
-                Vector<Vector<Object>> data = new Vector<>();
-
-                while (rs.next()) {
-                    Vector<Object> row = new Vector<>();
-                    row.add(rs.getString("name"));
-                    row.add(rs.getInt("quantity"));
-                    row.add(rs.getDouble("price"));
-                    row.add(rs.getInt("quantity") * rs.getDouble("price"));
-                    data.add(row);
-                }
-
-                DefaultTableModel model = new DefaultTableModel(data, columns) {
-                    @Override
-                    public Class<?> getColumnClass(int columnIndex) {
-                        if (columnIndex == 1) return Integer.class;
-                        if (columnIndex == 2 || columnIndex == 3) return Double.class;
-                        return String.class;
+                        while (itemsRs.next()) {
+                            String name = itemsRs.getString("name");
+                            int quantity = itemsRs.getInt("quantity");
+                            double price = itemsRs.getDouble("price");
+                            itemsTableModel.addRow(new Object[]{
+                                    name,
+                                    quantity,
+                                    price,
+                                    quantity * price
+                            });
+                        }
                     }
-                };
 
-                JScrollPane tableScroll = (JScrollPane) ((BorderLayout) getContentPane().getLayout()).getLayoutComponent(BorderLayout.SOUTH);
-                JTable itemsTable = (JTable) tableScroll.getViewport().getView();
-
-                String currencySymbol = currencyCode.equals("USD") ? "$" :
-                        currencyCode.equals("JPY") ? "¥" : "₱";
-
-                itemsTable.setModel(model);
-                itemsTable.getColumnModel().getColumn(2).setCellRenderer(new CurrencyCellRenderer(currencySymbol));
-                itemsTable.getColumnModel().getColumn(3).setCellRenderer(new CurrencyCellRenderer(currencySymbol));
-
-                itemsTable.revalidate();
-                itemsTable.repaint();
+                    // Set currency renderers
+                    itemsTable.getColumnModel().getColumn(2)
+                            .setCellRenderer(new CurrencyCellRenderer(currencySymbol));
+                    itemsTable.getColumnModel().getColumn(3)
+                            .setCellRenderer(new CurrencyCellRenderer(currencySymbol));
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Order not found with ID: " + orderId,
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -201,19 +205,6 @@ public class OrderDetailsView extends JFrame {
                     "Database Error",
                     JOptionPane.ERROR_MESSAGE);
         }
-    }
-
-    // Modified addInfoRow method to include value
-    private void addInfoRow(JPanel panel, String label, String valueText) {
-        JLabel lbl = new JLabel(label);
-        lbl.setFont(FONT_BODY);
-        lbl.setForeground(Color.WHITE);
-        panel.add(lbl);
-
-        JLabel value = new JLabel(valueText);
-        value.setFont(FONT_BODY);
-        value.setForeground(Color.WHITE);
-        panel.add(value);
     }
 
     private class CurrencyCellRenderer extends DefaultTableCellRenderer {

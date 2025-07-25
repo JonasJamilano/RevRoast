@@ -196,10 +196,25 @@ public class PendingOrdersView extends JFrame {
             return;
         }
 
-        int orderId = (Integer) ordersTable.getValueAt(selectedRow, 0);
-        OrderDetailsView detailsView = new OrderDetailsView(orderId);
-        detailsView.setVisible(true);
-        detailsView.toFront(); // Bring to front in case it's behind
+        try {
+            int orderId = (Integer) ordersTable.getValueAt(selectedRow, 0);
+            System.out.println("Attempting to open order details for ID: " + orderId); // Debug
+
+            // Create and display the order details window
+            OrderDetailsView detailsView = new OrderDetailsView(orderId);
+            detailsView.setVisible(true);
+
+            // Bring to front and request focus
+            detailsView.toFront();
+            detailsView.requestFocus();
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error opening order details: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // Custom cell renderers
