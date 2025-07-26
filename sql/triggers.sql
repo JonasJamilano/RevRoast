@@ -1,4 +1,4 @@
--- 1. before_order_item_insert
+-- 1. before_order_item_insert for CUSTOMER
 DELIMITER //
 CREATE TRIGGER before_order_item_insert
     BEFORE INSERT ON order_items
@@ -17,30 +17,19 @@ END IF;
 END //
 DELIMITER ;
 
--- 2. after_transaction_log_insert
+-- 2. before_product_insert for ADMIN
 DELIMITER //
-CREATE TRIGGER after_transaction_log_insert
-    AFTER INSERT ON transaction_log
+CREATE TRIGGER before_product_insert
+    BEFORE INSERT ON products
     FOR EACH ROW
 BEGIN
-    IF NEW.payment_status = 'completed' THEN
-        -- Update user points or other post-payment actions
-    UPDATE users
-    SET rpm_points = COALESCE(rpm_points, 0) + NEW.rpm_points_earned
-    WHERE user_id = (SELECT user_id FROM orders WHERE order_id = NEW.order_id);
+    IF EXISTS(SELECT 1 FROM products WHERE LOWER(name) = LOWER(NEW.name)) THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Product name already exists';
 END IF;
 END //
 DELIMITER ;
 
--- 3. after_product_price_update
-DELIMITER //
-CREATE TRIGGER after_product_price_update
-    AFTER UPDATE ON products
-    FOR EACH ROW
-BEGIN
-    IF OLD.price != NEW.price THEN
-        INSERT INTO price_history (product_id, old_price, new_price, change_date)
-        VALUES (NEW.product_id, OLD.price, NEW.price, NOW());
-END IF;
-END //
-DELIMITER ;
+
+
+

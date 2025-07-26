@@ -99,48 +99,76 @@ public class ProductManagement extends JFrame {
 
         addProductBtn.addActionListener(e -> {
             if (!role.equalsIgnoreCase("admin")) {
-                JOptionPane.showMessageDialog(this, "Only admin is allowed to add products.", "Access Denied", JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Only admin is allowed to add products.",
+                        "Access Denied", JOptionPane.WARNING_MESSAGE);
                 return;
             }
-        
+
             JTextField nameField = new JTextField();
             JTextField descField = new JTextField();
             JTextField priceField = new JTextField();
             JTextField stockField = new JTextField();
             JTextField currencyIdField = new JTextField();
-        
+
             Object[] inputFields = {
-                "Name:", nameField,
-                "Description:", descField,
-                "Price:", priceField,
-                "Stock:", stockField,
-                "Currency ID (1=PHP, 2=USD, 3=YEN):", currencyIdField
+                    "Name:", nameField,
+                    "Description:", descField,
+                    "Price:", priceField,
+                    "Stock:", stockField,
+                    "Currency ID (1=PHP, 2=USD, 3=YEN):", currencyIdField
             };
-        
-            int option = JOptionPane.showConfirmDialog(this, inputFields, "Add New Product", JOptionPane.OK_CANCEL_OPTION);
+
+            int option = JOptionPane.showConfirmDialog(
+                    this, inputFields, "Add New Product", JOptionPane.OK_CANCEL_OPTION);
+
             if (option == JOptionPane.OK_OPTION) {
                 try {
-                    String name = nameField.getText();
-                    String description = descField.getText();
+                    String name = nameField.getText().trim();
+                    String description = descField.getText().trim();
                     double price = Double.parseDouble(priceField.getText());
                     int stock = Integer.parseInt(stockField.getText());
                     int currencyId = Integer.parseInt(currencyIdField.getText());
-        
+
+                    // Check for empty name first (client-side validation)
+                    if (name.isEmpty()) {
+                        throw new IllegalArgumentException("Product name cannot be empty");
+                    }
+
                     CallableStatement stmt = conn.prepareCall("{CALL add_product(?, ?, ?, ?, ?)}");
                     stmt.setString(1, name);
                     stmt.setString(2, description);
                     stmt.setDouble(3, price);
                     stmt.setInt(4, stock);
                     stmt.setInt(5, currencyId);
-        
+
                     stmt.execute();
                     JOptionPane.showMessageDialog(this, "Product added successfully!");
                     loadProductData();
-                } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(this, "Error adding product: " + ex.getMessage());
+
+                } catch (SQLException ex) {
+                    // Handle trigger error (SQLState 45000)
+                    if ("45000".equals(ex.getSQLState())) {
+                        JOptionPane.showMessageDialog(this,
+                                "Failed to add product: " + ex.getMessage(),
+                                "Duplicate Product", JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(this,
+                                "Database error: " + ex.getMessage(),
+                                "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (NumberFormatException ex) {
+                    JOptionPane.showMessageDialog(this,
+                            "Invalid number format in price/stock/currency",
+                            "Input Error", JOptionPane.ERROR_MESSAGE);
+                } catch (IllegalArgumentException ex) {
+                    JOptionPane.showMessageDialog(this,
+                            ex.getMessage(),
+                            "Input Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
+
 
         deleteProductBtn.addActionListener(e -> {
             if (!role.equalsIgnoreCase("admin")) {
@@ -221,6 +249,15 @@ public class ProductManagement extends JFrame {
             JOptionPane.showMessageDialog(this, "Error updating stock: " + e.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
+        }
+    }
+
+    private boolean productExists(String productName) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT 1 FROM products WHERE LOWER(name) = LOWER(?)")) {
+            stmt.setString(1, productName.trim());
+            ResultSet rs = stmt.executeQuery();
+            return rs.next();
         }
     }
 
