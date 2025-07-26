@@ -92,8 +92,7 @@ START TRANSACTION;
 
 SELECT user_id INTO v_staff_id
 FROM users
-WHERE name = p_staff_username AND role = 'staff'
-    FOR UPDATE;
+WHERE name = p_staff_username AND role IN ('staff', 'admin') FOR UPDATE;
 
 IF v_staff_id IS NULL THEN
         ROLLBACK;
