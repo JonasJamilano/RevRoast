@@ -32,9 +32,9 @@ public class AdminHome extends JFrame {
             setVisible(true);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
-                "Failed to load resources: " + e.getMessage(),
-                "Error",
-                JOptionPane.ERROR_MESSAGE);
+                    "Failed to load resources: " + e.getMessage(),
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
             dispose();
             new login();
         }
@@ -78,8 +78,8 @@ public class AdminHome extends JFrame {
         buttonPanel.add(logoutBtn);
 
         productManagementBtn.addActionListener(e -> openWindow(new ProductManagement(username, "admin")));
-        // userManagementBtn.addActionListener(e -> openWindow(new UserManagement(username))); 
-        // inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username))); 
+        userManagementBtn.addActionListener(e -> JOptionPane.showMessageDialog(this, "User Management feature coming soon"));
+        inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username)));
         logoutBtn.addActionListener(e -> {
             dispose();
             new login();
@@ -120,26 +120,26 @@ public class AdminHome extends JFrame {
                 super.paintComponent(g);
             }
         };
-    
+
         btn.setContentAreaFilled(false);
         btn.setOpaque(true);
-        btn.setBackground(new Color(252, 17, 17)); // Red
+        btn.setBackground(new Color(252, 17, 17));
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setFont(new Font("Poppins", Font.BOLD, 14));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn.setMaximumSize(new Dimension(200, 40));
-    
+
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                btn.setBackground(new Color(220, 0, 0)); // Darker red
+                btn.setBackground(new Color(220, 0, 0));
             }
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(new Color(252, 17, 17)); // Original red
+                btn.setBackground(new Color(252, 17, 17));
             }
         });
-    
+
         return btn;
     }
 

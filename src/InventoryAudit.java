@@ -86,7 +86,7 @@ public class InventoryAudit extends JFrame {
         });
 
         backBtn.addActionListener(e -> {
-            new StaffHome(username);
+            new AdminHome(username);
             dispose();
         });
 
