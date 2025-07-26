@@ -1,9 +1,25 @@
 import java.awt.*;
 import java.awt.event.*;
-import javax.swing.*;
 import java.sql.*;
+import javax.swing.*;
 
 public class login extends JFrame {
+    // Role constants
+    private static final String ROLE_STAFF = "staff";
+    private static final String ROLE_CUSTOMER = "customer";
+
+    // Static block for cross-platform styling
+    static {
+        try {
+            UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
+            UIManager.put("Button.background", new Color(252, 17, 17));
+            UIManager.put("Button.foreground", Color.WHITE);
+            UIManager.put("Button.focusPainted", false);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
     public login() {
         setTitle("Rev & Roast - Login");
         setSize(400, 350);
@@ -26,7 +42,7 @@ public class login extends JFrame {
         gbc.gridwidth = 2;
         panel.add(title, gbc);
 
-        // Email Label and Field
+        // Email Field
         gbc.gridwidth = 1;
         gbc.gridy++;
         gbc.gridx = 0;
@@ -38,7 +54,7 @@ public class login extends JFrame {
         JTextField emailField = new JTextField(15);
         panel.add(emailField, gbc);
 
-        // Password Label and Field
+        // Password Field
         gbc.gridx = 0;
         gbc.gridy++;
         JLabel passwordLabel = new JLabel("Password:");
@@ -53,9 +69,7 @@ public class login extends JFrame {
         gbc.gridx = 0;
         gbc.gridy++;
         gbc.gridwidth = 2;
-        JButton loginBtn = new JButton("Login");
-        loginBtn.setBackground(new Color(252, 17, 17));
-        loginBtn.setForeground(Color.WHITE);
+        JButton loginBtn = createStyledButton("Login");
         panel.add(loginBtn, gbc);
 
         // Register Label
@@ -69,11 +83,9 @@ public class login extends JFrame {
                 dispose();
                 new register();
             }
-
             public void mouseEntered(MouseEvent e) {
                 registerLabel.setForeground(new Color(255, 180, 120));
             }
-
             public void mouseExited(MouseEvent e) {
                 registerLabel.setForeground(new Color(255, 200, 150));
             }
@@ -82,18 +94,15 @@ public class login extends JFrame {
 
         // Back Button
         gbc.gridy++;
-        JButton backButton = new JButton("Back to Home");
-        backButton.setBackground(new Color(139, 69, 19));
-        backButton.setForeground(Color.WHITE);
-        backButton.setFont(new Font("Arial", Font.PLAIN, 16));
-
+        JButton backButton = createStyledButton("Back to Home");
+        backButton.setBackground(new Color(139, 69, 19)); // Brown color for back button
         backButton.addActionListener(e -> {
-            new home(); // default home (not logged in)
+            new home();
             dispose();
         });
         panel.add(backButton, gbc);
 
-        // Login Logic
+        // ✅ Updated Login Logic
         loginBtn.addActionListener(e -> {
             String email = emailField.getText().trim();
             String password = new String(passwordField.getPassword());
@@ -103,8 +112,9 @@ public class login extends JFrame {
                 return;
             }
 
-            try (Connection conn = DatabaseConnector.getConnection();
-                 PreparedStatement stmt = conn.prepareStatement("SELECT * FROM users WHERE email = ? AND password = ?")) {
+            try (Connection conn = DatabaseConnector.getConnection(); // Default/root connection
+                 PreparedStatement stmt = conn.prepareStatement(
+                         "SELECT user_id, name, role FROM users WHERE email = ? AND password = ?")) {
 
                 stmt.setString(1, email);
                 stmt.setString(2, password);
@@ -112,19 +122,41 @@ public class login extends JFrame {
                 ResultSet rs = stmt.executeQuery();
 
                 if (rs.next()) {
-                    String username = rs.getString("name"); // fetch name or username column
-                    String role = rs.getString("role");
+                    int userId = rs.getInt("user_id");
+                    String username = rs.getString("name");
+                    String role = rs.getString("role").toLowerCase();
 
-                    JOptionPane.showMessageDialog(this, "Welcome, " + username + " (" + role + ")!");
-                    new home(username);  // ✅ Pass the username to the home screen
+                    JOptionPane.showMessageDialog(this,
+                            "Welcome back, " + username + "!",
+                            "Login Successful",
+                            JOptionPane.INFORMATION_MESSAGE);
+
                     dispose();
-                } else {
-                    JOptionPane.showMessageDialog(this, "Invalid email or password.", "Login Failed", JOptionPane.ERROR_MESSAGE);
-                }
 
-            } catch (Exception ex) {
+                    // ✅ Get role-based connection
+                    Connection roleConn = DatabaseConnector.getConnection(role);
+
+                    // ✅ Pass roleConn to dashboards
+                    if ("admin".equals(role)) {
+                        new AdminHome(username, roleConn);
+                    } else if (ROLE_STAFF.equalsIgnoreCase(role)) {
+                        new StaffHome(username, roleConn);
+                    } else {
+                        new home(username, userId, roleConn);
+                    }
+
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Invalid email or password.",
+                            "Login Failed",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (SQLException ex) {
                 ex.printStackTrace();
-                JOptionPane.showMessageDialog(this, "Database error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this,
+                        "Database error: " + ex.getMessage(),
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE);
             }
         });
 
@@ -132,7 +164,43 @@ public class login extends JFrame {
         setVisible(true);
     }
 
+    // Custom button creator
+    private JButton createStyledButton(String text) {
+        JButton btn = new JButton(text) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                if (!isOpaque()) {
+                    Graphics2D g2 = (Graphics2D) g.create();
+                    g2.setColor(getBackground());
+                    g2.fillRect(0, 0, getWidth(), getHeight());
+                    g2.dispose();
+                }
+                super.paintComponent(g);
+            }
+        };
+        btn.setContentAreaFilled(false);
+        btn.setOpaque(true);
+        btn.setBackground(new Color(252, 17, 17)); // Default red
+        btn.setForeground(Color.WHITE);
+        btn.setFocusPainted(false);
+        btn.setFont(new Font("Poppins", Font.BOLD, 14));
+        btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
+
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) {
+                btn.setBackground(new Color(220, 0, 0)); // Darker red
+            }
+            public void mouseExited(MouseEvent e) {
+                btn.setBackground(new Color(252, 17, 17)); // Original red
+            }
+        });
+
+        return btn;
+    }
+
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(login::new);
+        SwingUtilities.invokeLater(() -> {
+            new login().setVisible(true);
+        });
     }
 }
