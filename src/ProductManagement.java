@@ -98,6 +98,11 @@ public class ProductManagement extends JFrame {
         });
 
         addProductBtn.addActionListener(e -> {
+            if (!role.equalsIgnoreCase("admin")) {
+                JOptionPane.showMessageDialog(this, "Only admin is allowed to add products.", "Access Denied", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        
             JTextField nameField = new JTextField();
             JTextField descField = new JTextField();
             JTextField priceField = new JTextField();
@@ -138,6 +143,11 @@ public class ProductManagement extends JFrame {
         });
 
         deleteProductBtn.addActionListener(e -> {
+            if (!role.equalsIgnoreCase("admin")) {
+                JOptionPane.showMessageDialog(this, "Only admin is allowed to delete products.", "Access Denied", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        
             int selectedRow = productTable.getSelectedRow();
             if (selectedRow == -1) {
                 JOptionPane.showMessageDialog(this, "Please select a product to delete");
