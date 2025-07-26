@@ -77,9 +77,10 @@ public class AdminHome extends JFrame {
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         buttonPanel.add(logoutBtn);
 
+        // Button Actions
         productManagementBtn.addActionListener(e -> openWindow(new ProductManagement(username, "admin")));
-        userManagementBtn.addActionListener(e -> JOptionPane.showMessageDialog(this, "User Management feature coming soon"));
-        inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username)));
+        userManagementBtn.addActionListener(e -> openWindow(new UserManagement(username)));
+        inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username))); // ✅ Enabled
         logoutBtn.addActionListener(e -> {
             dispose();
             new login();
@@ -123,7 +124,7 @@ public class AdminHome extends JFrame {
 
         btn.setContentAreaFilled(false);
         btn.setOpaque(true);
-        btn.setBackground(new Color(252, 17, 17));
+        btn.setBackground(new Color(252, 17, 17)); // Red
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setFont(new Font("Poppins", Font.BOLD, 14));
@@ -133,10 +134,10 @@ public class AdminHome extends JFrame {
 
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                btn.setBackground(new Color(220, 0, 0));
+                btn.setBackground(new Color(220, 0, 0)); // Darker red
             }
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(new Color(252, 17, 17));
+                btn.setBackground(new Color(252, 17, 17)); // Original red
             }
         });
 
