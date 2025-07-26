@@ -30,6 +30,32 @@ END IF;
 END //
 DELIMITER ;
 
+-- 3. before_user_email_check for REGISTER
+DELIMITER //
+CREATE TRIGGER before_user_email_check
+    BEFORE INSERT ON users
+    FOR EACH ROW
+BEGIN
+    IF NEW.email NOT REGEXP '^[A-Za-z0-9._%-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,4}$' THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Invalid email format';
+END IF;
 
+IF EXISTS (SELECT 1 FROM users WHERE email = NEW.email) THEN
+        SIGNAL SQLSTATE '45001'
+        SET MESSAGE_TEXT = 'Email already registered';
+END IF;
+END //
+DELIMITER ;
 
+-- 4. before_user_registration
+DELIMITER //
+CREATE TRIGGER before_user_registration
+    BEFORE INSERT ON users
+    FOR EACH ROW
+BEGIN
+    -- Set default points before insert
+    SET NEW.rpm_points = IFNULL(NEW.rpm_points, 0) + 100;
+END //
+DELIMITER ;
 
