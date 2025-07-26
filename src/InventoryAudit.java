@@ -1,4 +1,3 @@
-// InventoryAudit.java
 import java.awt.*;
 import java.sql.*;
 import javax.swing.*;
@@ -48,42 +47,13 @@ public class InventoryAudit extends JFrame {
         // Button panel
         JPanel buttonPanel = new JPanel();
         JButton refreshBtn = new JButton("Refresh");
-        JButton viewLowStockBtn = new JButton("View Low Stock");
         JButton backBtn = new JButton("Back to Dashboard");
 
         buttonPanel.add(refreshBtn);
-        buttonPanel.add(viewLowStockBtn);
         buttonPanel.add(backBtn);
 
         // Button actions
         refreshBtn.addActionListener(e -> loadInventoryData());
-
-        viewLowStockBtn.addActionListener(e -> {
-            try {
-                String query = "SELECT p.name, i.current_stock " +
-                        "FROM products p JOIN inventory_audit i ON p.product_id = i.product_id " +
-                        "WHERE i.new_quantity < 5 " +  // Assuming 5 is low stock threshold
-                        "GROUP BY p.product_id";
-
-                Statement stmt = conn.createStatement();
-                ResultSet rs = stmt.executeQuery(query);
-
-                StringBuilder lowStockItems = new StringBuilder("Low Stock Items:\n");
-                while (rs.next()) {
-                    lowStockItems.append(rs.getString("name"))
-                            .append(": ")
-                            .append(rs.getInt("current_stock"))
-                            .append("\n");
-                }
-
-                JOptionPane.showMessageDialog(this, lowStockItems.toString(),
-                        "Low Stock Items", JOptionPane.INFORMATION_MESSAGE);
-            } catch (SQLException ex) {
-                JOptionPane.showMessageDialog(this, "Error loading low stock items: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
-                ex.printStackTrace();
-            }
-        });
 
         backBtn.addActionListener(e -> {
             new AdminHome(username);
