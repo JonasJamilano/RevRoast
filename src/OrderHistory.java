@@ -129,7 +129,7 @@ public class OrderHistory extends JFrame {
     private void loadOrderHistory() {
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT o.order_id, o.order_date, o.total_amount, o.status, " +
+                     "SELECT o.order_id, o.order_date, o.total_amount, o.orderstatus, " +  // Changed from status to orderstatus
                              "c.currency_code FROM orders o " +
                              "JOIN currencies c ON o.currency_id = c.currency_id " +
                              "WHERE o.user_id = ? " +
@@ -142,7 +142,7 @@ public class OrderHistory extends JFrame {
             columns.add("Order ID");
             columns.add("Date");
             columns.add("Amount");
-            columns.add("Status");
+            columns.add("Status");  // This remains as the display label
             columns.add("Currency");
 
             Vector<Vector<Object>> data = new Vector<>();
@@ -152,7 +152,7 @@ public class OrderHistory extends JFrame {
                 row.add(rs.getInt("order_id"));
                 row.add(rs.getTimestamp("order_date"));
                 row.add(rs.getDouble("total_amount"));
-                row.add(rs.getString("status"));
+                row.add(rs.getString("orderstatus"));  // Changed from status to orderstatus
                 row.add(rs.getString("currency_code"));
                 data.add(row);
             }
@@ -174,9 +174,10 @@ public class OrderHistory extends JFrame {
 
             ordersTable.setModel(model);
 
-            // Custom renderers
-            ordersTable.getColumnModel().getColumn(2).setCellRenderer(new CurrencyCellRenderer());
+            // Set custom renderers
             ordersTable.getColumnModel().getColumn(1).setCellRenderer(new DateCellRenderer());
+            ordersTable.getColumnModel().getColumn(2).setCellRenderer(new CurrencyCellRenderer());
+            ordersTable.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
 
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
@@ -236,6 +237,34 @@ public class OrderHistory extends JFrame {
                 Timestamp ts = (Timestamp) value;
                 setText(ts.toLocalDateTime().toLocalDate().toString());
             }
+            return this;
+        }
+    }
+
+    private class StatusCellRenderer extends DefaultTableCellRenderer {
+        public StatusCellRenderer() {
+            setHorizontalAlignment(JLabel.CENTER);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            String status = value.toString().toUpperCase();
+            setText(status);
+
+            // Customize color based on status
+            if ("PENDING".equals(status)) {
+                setForeground(Color.ORANGE);
+            } else if ("PROCESSING".equals(status)) {
+                setForeground(Color.YELLOW);
+            } else if ("COMPLETED".equals(status)) {
+                setForeground(Color.GREEN);
+            } else if ("CANCELLED".equals(status)) {
+                setForeground(Color.RED);
+            }
+
             return this;
         }
     }
