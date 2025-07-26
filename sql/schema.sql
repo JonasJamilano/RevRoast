@@ -50,6 +50,8 @@ ADD COLUMN order_type ENUM('pickup', 'delivery') NULL,
 ADD COLUMN special_instructions TEXT NULL,
 ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 ADD COLUMN updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+ADD COLUMN completed_by INT NULL,
+ADD COLUMN completed_at DATETIME DEFAULT CURRENT_TIMESTAMP,
 ADD CONSTRAINT fk_completed_by FOREIGN KEY (completed_by) REFERENCES users(user_id),
 ADD COLUMN status ENUM('pending', 'processing', 'completed', 'cancelled') DEFAULT 'pending';
 

@@ -183,3 +183,34 @@ COMMIT;
 END //
 
 DELIMITER ;
+
+-- 5 Add Products for Admin
+
+DELIMITER //
+
+CREATE PROCEDURE add_product(
+    IN p_name VARCHAR(255),
+    IN p_description TEXT,
+    IN p_price DECIMAL(10,2),
+    IN p_stock INT,
+    IN p_currency_id INT
+)
+BEGIN
+    INSERT INTO products (name, description, price, stock_quantity, currency_id)
+    VALUES (p_name, p_description, p_price, p_stock, p_currency_id);
+END //
+
+DELIMITER ;
+
+-- 6 Delete Products for Admin
+
+DELIMITER //
+
+CREATE PROCEDURE delete_product(
+    IN p_product_id INT
+)
+BEGIN
+    DELETE FROM products WHERE product_id = p_product_id;
+END //
+
+DELIMITER ;
