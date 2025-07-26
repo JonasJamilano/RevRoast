@@ -129,10 +129,10 @@ public class PendingOrdersView extends JFrame {
     private void loadPendingOrders() {
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT o.order_id, o.order_date, o.total_amount, o.orderstatus, " +  // Changed from status to orderstatus
+                     "SELECT o.order_id, o.order_date, o.total_amount, o.orderstatus, " +
                              "c.currency_code FROM orders o " +
                              "JOIN currencies c ON o.currency_id = c.currency_id " +
-                             "WHERE o.user_id = ? AND o.orderstatus != 'completed' " +  // Changed here too
+                             "WHERE o.user_id = ? AND o.orderstatus = 'pending' " +
                              "ORDER BY o.order_date DESC")) {
 
             stmt.setInt(1, userId);
@@ -142,7 +142,7 @@ public class PendingOrdersView extends JFrame {
             columns.add("Order ID");
             columns.add("Date");
             columns.add("Amount");
-            columns.add("Status");  // This remains as the display label
+            columns.add("Status");
             columns.add("Currency");
 
             Vector<Vector<Object>> data = new Vector<>();
@@ -152,12 +152,25 @@ public class PendingOrdersView extends JFrame {
                 row.add(rs.getInt("order_id"));
                 row.add(rs.getTimestamp("order_date"));
                 row.add(rs.getDouble("total_amount"));
-                row.add(rs.getString("orderstatus"));  // Changed from status to orderstatus
+                row.add(rs.getString("orderstatus").toUpperCase()); // Display status in uppercase
                 row.add(rs.getString("currency_code"));
                 data.add(row);
             }
 
-            // ... rest of the method remains the same ...
+            DefaultTableModel model = new DefaultTableModel(data, columns) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+            };
+
+            ordersTable.setModel(model);
+
+            // Set custom renderers
+            ordersTable.getColumnModel().getColumn(1).setCellRenderer(new DateCellRenderer());
+            ordersTable.getColumnModel().getColumn(2).setCellRenderer(new CurrencyCellRenderer());
+            ordersTable.getColumnModel().getColumn(3).setCellRenderer(new StatusCellRenderer());
+
         } catch (SQLException e) {
             JOptionPane.showMessageDialog(this,
                     "Error loading orders: " + e.getMessage(),
@@ -178,16 +191,10 @@ public class PendingOrdersView extends JFrame {
 
         try {
             int orderId = (Integer) ordersTable.getValueAt(selectedRow, 0);
-            System.out.println("Attempting to open order details for ID: " + orderId); // Debug
-
-            // Create and display the order details window
             OrderDetailsView detailsView = new OrderDetailsView(orderId);
             detailsView.setVisible(true);
-
-            // Bring to front and request focus
             detailsView.toFront();
             detailsView.requestFocus();
-
         } catch (Exception e) {
             e.printStackTrace();
             JOptionPane.showMessageDialog(this,
@@ -231,6 +238,34 @@ public class PendingOrdersView extends JFrame {
                 Timestamp ts = (Timestamp) value;
                 setText(ts.toLocalDateTime().toLocalDate().toString());
             }
+            return this;
+        }
+    }
+
+    private class StatusCellRenderer extends DefaultTableCellRenderer {
+        public StatusCellRenderer() {
+            setHorizontalAlignment(JLabel.CENTER);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                                                       boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            String status = value.toString();
+            setText(status.toUpperCase()); // Ensure status is displayed in uppercase
+
+            // Customize color based on status
+            if ("PENDING".equals(status)) {
+                setForeground(Color.ORANGE);
+            } else if ("PROCESSING".equals(status)) {
+                setForeground(Color.YELLOW);
+            } else if ("COMPLETED".equals(status)) {
+                setForeground(Color.GREEN);
+            } else if ("CANCELLED".equals(status)) {
+                setForeground(Color.RED);
+            }
+
             return this;
         }
     }
