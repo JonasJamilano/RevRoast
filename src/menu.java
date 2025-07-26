@@ -324,14 +324,23 @@ public class menu extends JFrame {
             int quantity = (Integer) qtySpinner.getValue();
             String itemKey = name + " - " + currencySymbol + String.format("%.2f", convertedPrice);
 
-            try (Connection conn = DatabaseConnector.getConnection();
-                 CallableStatement stmt = conn.prepareCall("{call add_to_cart(?, ?)}")) {
+            try (Connection conn = DatabaseConnector.getConnection()) {
+                // 1. Call the add_to_cart stored procedure (validates stock)
+                try (CallableStatement stmt = conn.prepareCall("{call add_to_cart(?, ?)}")) {
+                    int productId = getProductIdByName(name);
+                    stmt.setInt(1, productId);
+                    stmt.setInt(2, quantity);
+                    stmt.execute();
+                } catch (SQLException ex) {
+                    if (ex.getSQLState() != null && ex.getSQLState().equals("45000")) {
+                        showErrorMessage("Failed to add to cart: " + ex.getMessage());
+                        refreshProductStocks(); // Refresh UI to show current stock
+                        return;
+                    }
+                    throw ex; // Re-throw other SQL exceptions
+                }
 
-                int productId = getProductIdByName(name);
-                stmt.setInt(1, productId);
-                stmt.setInt(2, quantity);
-                stmt.execute();
-
+                // 2. If procedure succeeds, update local cart
                 if (!cartItems.contains(itemKey)) {
                     cartItems.add(itemKey);
                     cartQuantities.put(itemKey, quantity);
@@ -341,9 +350,8 @@ public class menu extends JFrame {
 
                 updateCartButtonCount();
                 showSuccessMessage(quantity + " × " + name + " added to cart");
-
             } catch (SQLException ex) {
-                showErrorMessage("Failed to add to cart: " + ex.getMessage());
+                showErrorMessage("Database error: " + ex.getMessage());
             }
         });
 
@@ -729,8 +737,8 @@ public class menu extends JFrame {
     }
 
     private OrderResult processOrderTransaction(JComboBox<String> paymentOptions,
-                                                JComboBox<String> orderTypeOptions, JTextArea instructionsField) {
-        // Calculate total amount from cart
+                                                JComboBox<String> orderTypeOptions,
+                                                JTextArea instructionsField) {
         double totalAmount = calculateCartTotal();
         String paymentMethod = (String) paymentOptions.getSelectedItem();
         String orderType = (String) orderTypeOptions.getSelectedItem();
@@ -748,13 +756,12 @@ public class menu extends JFrame {
             conn.setAutoCommit(false); // Start transaction
 
             try {
-                // 1. Create the order with 'processing' status
+                // 1. Create the order
                 int orderId;
                 int rpmPointsEarned;
 
                 try (CallableStatement orderStmt = conn.prepareCall(
                         "{call send_order(?, ?, ?, ?, ?, ?, ?, ?)}")) {
-
                     orderStmt.setInt(1, currentUserId);
                     orderStmt.setInt(2, currencyId);
                     orderStmt.setString(3, paymentMethod);
@@ -770,7 +777,7 @@ public class menu extends JFrame {
                     rpmPointsEarned = orderStmt.getInt(8);
                 }
 
-                // 2. Insert all order items
+                // 2. Insert order items (trigger will validate stock)
                 try (PreparedStatement itemStmt = conn.prepareStatement(
                         "INSERT INTO order_items (order_id, product_id, quantity, price) " +
                                 "VALUES (?, ?, ?, (SELECT price FROM products WHERE product_id = ?))")) {
@@ -789,7 +796,7 @@ public class menu extends JFrame {
                     itemStmt.executeBatch();
                 }
 
-                // 3. Update product stocks (reserve them)
+                // 3. Update product stocks
                 try (PreparedStatement stockStmt = conn.prepareStatement(
                         "UPDATE products SET stock_quantity = stock_quantity - ? " +
                                 "WHERE product_id = ?")) {
@@ -807,7 +814,6 @@ public class menu extends JFrame {
                 }
 
                 conn.commit(); // Commit transaction if all succeeded
-
                 return new OrderResult(true, orderId, rpmPointsEarned, totalAmount);
 
             } catch (SQLException ex) {
@@ -816,8 +822,18 @@ public class menu extends JFrame {
                 } catch (SQLException e) {
                     e.printStackTrace();
                 }
-                showErrorMessage("Checkout failed: " + ex.getMessage());
-                ex.printStackTrace();
+
+                // Handle trigger error (SQLState 45000)
+                if (ex.getSQLState() != null && ex.getSQLState().equals("45000")) {
+                    showErrorMessage("Checkout failed: " + ex.getMessage());
+                    refreshProductStocks(); // Refresh UI to show current stock
+                } else if (ex instanceof BatchUpdateException) {
+                    // Handle batch errors specifically
+                    showErrorMessage("Checkout failed for some items. Please check your cart.");
+                    refreshProductStocks();
+                } else {
+                    showErrorMessage("Checkout failed: " + ex.getMessage());
+                }
                 return new OrderResult(false, -1, 0, 0);
             } finally {
                 try {
@@ -826,10 +842,8 @@ public class menu extends JFrame {
                     e.printStackTrace();
                 }
             }
-
         } catch (SQLException ex) {
             showErrorMessage("Database connection error: " + ex.getMessage());
-            ex.printStackTrace();
             return new OrderResult(false, -1, 0, 0);
         }
     }
@@ -905,6 +919,31 @@ public class menu extends JFrame {
             this.orderId = orderId;
             this.rpmPointsEarned = rpmPointsEarned;
             this.totalAmount = totalAmount;
+        }
+    }
+
+    private int getCurrentStock(Connection conn, String productName) throws SQLException {
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "SELECT stock_quantity FROM products WHERE name = ? FOR UPDATE")) {
+            stmt.setString(1, productName);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt("stock_quantity");
+            }
+            throw new SQLException("Product not found: " + productName);
+        }
+    }
+
+    private void refreshProductStocks() {
+        try (Connection conn = DatabaseConnector.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT name, stock_quantity FROM products")) {
+
+            // Rebuild the menu panel with updated stock quantities
+            updateMenuItems();
+
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
