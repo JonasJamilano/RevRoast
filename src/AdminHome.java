@@ -2,16 +2,16 @@ import java.awt.*;
 import java.awt.event.*;
 import javax.swing.*;
 
-public class StaffHome extends JFrame {
+public class AdminHome extends JFrame {
     private String username;
 
-    public StaffHome(String username) {
+    public AdminHome(String username) {
         this.username = username;
         initializeUI();
     }
 
     private void initializeUI() {
-        setTitle("Rev & Roast - Staff Dashboard");
+        setTitle("Rev & Roast - Admin Dashboard");
         setSize(800, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
@@ -20,26 +20,23 @@ public class StaffHome extends JFrame {
             JPanel mainPanel = new BackgroundPanel("f1bg.jpg");
             mainPanel.setLayout(new BorderLayout());
 
-            // Header panel
             JPanel headerPanel = createHeaderPanel();
             mainPanel.add(headerPanel, BorderLayout.NORTH);
 
-            // Center buttons
             JPanel buttonPanel = createButtonPanel();
             mainPanel.add(buttonPanel, BorderLayout.CENTER);
 
-            // Footer
             mainPanel.add(createFooterPanel(), BorderLayout.SOUTH);
 
             add(mainPanel);
             setVisible(true);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
-                    "Failed to load resources: " + e.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+                "Failed to load resources: " + e.getMessage(),
+                "Error",
+                JOptionPane.ERROR_MESSAGE);
             dispose();
-            new login(); // Fallback to login screen
+            new login();
         }
     }
 
@@ -48,12 +45,12 @@ public class StaffHome extends JFrame {
         headerPanel.setOpaque(false);
         headerPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
 
-        JLabel title = new JLabel("Staff Dashboard", SwingConstants.LEFT);
+        JLabel title = new JLabel("Admin Dashboard", SwingConstants.LEFT);
         title.setFont(new Font("Playfair Display", Font.BOLD, 36));
         title.setForeground(new Color(252, 65, 17));
         headerPanel.add(title, BorderLayout.WEST);
 
-        JLabel welcomeLabel = new JLabel("Welcome, " + username + " (Staff)");
+        JLabel welcomeLabel = new JLabel("Welcome, " + username + " (Admin)");
         welcomeLabel.setFont(new Font("Poppins", Font.PLAIN, 16));
         welcomeLabel.setForeground(Color.RED);
         headerPanel.add(welcomeLabel, BorderLayout.EAST);
@@ -68,23 +65,21 @@ public class StaffHome extends JFrame {
         buttonPanel.setBorder(BorderFactory.createEmptyBorder(80, 300, 50, 300));
 
         JButton productManagementBtn = createStyledButton("Product Management");
-        JButton transactionLogBtn = createStyledButton("Transaction Log");
-        JButton processOrdersBtn = createStyledButton("Process Orders");  // Changed from Inventory Audit
+        JButton userManagementBtn = createStyledButton("User Management");
+        JButton inventoryAuditBtn = createStyledButton("Inventory Audit");
         JButton logoutBtn = createStyledButton("Logout");
 
-        // Add buttons with spacing
         buttonPanel.add(productManagementBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        buttonPanel.add(transactionLogBtn);
+        buttonPanel.add(userManagementBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
-        buttonPanel.add(processOrdersBtn);  // Changed from inventoryAuditBtn
+        buttonPanel.add(inventoryAuditBtn);
         buttonPanel.add(Box.createRigidArea(new Dimension(0, 15)));
         buttonPanel.add(logoutBtn);
 
-        // Add action listeners with error handling
-        productManagementBtn.addActionListener(e -> openWindow(new ProductManagement(username, "staff")));
-        transactionLogBtn.addActionListener(e -> openWindow(new TransactionLog(username)));
-        processOrdersBtn.addActionListener(e -> openWindow(new ProcessOrders(username)));  // Changed to ProcessOrders
+        productManagementBtn.addActionListener(e -> openWindow(new ProductManagement(username, "admin")));
+        // userManagementBtn.addActionListener(e -> openWindow(new UserManagement(username))); 
+        // inventoryAuditBtn.addActionListener(e -> openWindow(new InventoryAudit(username))); 
         logoutBtn.addActionListener(e -> {
             dispose();
             new login();
@@ -94,7 +89,7 @@ public class StaffHome extends JFrame {
     }
 
     private JLabel createFooterPanel() {
-        JLabel footer = new JLabel("© 2025 Rev & Roast - Staff Access", SwingConstants.CENTER);
+        JLabel footer = new JLabel("© 2025 Rev & Roast - Admin Access", SwingConstants.CENTER);
         footer.setForeground(Color.LIGHT_GRAY);
         footer.setBorder(BorderFactory.createEmptyBorder(20, 0, 10, 0));
         return footer;
@@ -125,26 +120,26 @@ public class StaffHome extends JFrame {
                 super.paintComponent(g);
             }
         };
-
+    
         btn.setContentAreaFilled(false);
         btn.setOpaque(true);
-        btn.setBackground(new Color(252, 17, 17));
+        btn.setBackground(new Color(252, 17, 17)); // Red
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setFont(new Font("Poppins", Font.BOLD, 14));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
         btn.setAlignmentX(Component.CENTER_ALIGNMENT);
         btn.setMaximumSize(new Dimension(200, 40));
-
+    
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                btn.setBackground(new Color(220, 0, 0));
+                btn.setBackground(new Color(220, 0, 0)); // Darker red
             }
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(new Color(252, 17, 17));
+                btn.setBackground(new Color(252, 17, 17)); // Original red
             }
         });
-
+    
         return btn;
     }
 
@@ -167,7 +162,6 @@ public class StaffHome extends JFrame {
     }
 
     public static void main(String[] args) {
-        // For testing only
-        SwingUtilities.invokeLater(() -> new StaffHome("test_staff"));
+        SwingUtilities.invokeLater(() -> new AdminHome("admin_test"));
     }
 }

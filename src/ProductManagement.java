@@ -8,9 +8,11 @@ public class ProductManagement extends JFrame {
     private Connection conn;
     private DefaultTableModel tableModel;
     private String username;
+    private String role;
 
-    public ProductManagement(String username) {
+    public ProductManagement(String username, String role) {
         this.username = username;
+        this.role = role;
         initializeUI();
         connectToDatabase();
         loadProductData();
@@ -27,7 +29,7 @@ public class ProductManagement extends JFrame {
     }
 
     private void initializeUI() {
-        setTitle("Product Management - Staff Access");
+        setTitle("Product Management - " + (role.equalsIgnoreCase("admin") ? "Admin" : "Staff") + " Access");
         setSize(900, 600);
         setLocationRelativeTo(null);
 
@@ -48,10 +50,14 @@ public class ProductManagement extends JFrame {
         // Button panel
         JPanel buttonPanel = new JPanel();
         JButton refreshBtn = new JButton("Refresh");
+        JButton addProductBtn = new JButton("Add Product");
+        JButton deleteProductBtn = new JButton("Delete Product");
         JButton updateStockBtn = new JButton("Update Stock");
         JButton backBtn = new JButton("Back to Dashboard");
 
         buttonPanel.add(refreshBtn);
+        buttonPanel.add(addProductBtn);
+        buttonPanel.add(deleteProductBtn);
         buttonPanel.add(updateStockBtn);
         buttonPanel.add(backBtn);
 
@@ -83,8 +89,80 @@ public class ProductManagement extends JFrame {
         });
 
         backBtn.addActionListener(e -> {
-            new StaffHome(username);
             dispose();
+            if (role.equalsIgnoreCase("admin")) {
+                new AdminHome(username);
+            } else {
+                new StaffHome(username);
+            }
+        });
+
+        addProductBtn.addActionListener(e -> {
+            JTextField nameField = new JTextField();
+            JTextField descField = new JTextField();
+            JTextField priceField = new JTextField();
+            JTextField stockField = new JTextField();
+            JTextField currencyIdField = new JTextField();
+        
+            Object[] inputFields = {
+                "Name:", nameField,
+                "Description:", descField,
+                "Price:", priceField,
+                "Stock:", stockField,
+                "Currency ID (1=PHP, 2=USD, 3=YEN):", currencyIdField
+            };
+        
+            int option = JOptionPane.showConfirmDialog(this, inputFields, "Add New Product", JOptionPane.OK_CANCEL_OPTION);
+            if (option == JOptionPane.OK_OPTION) {
+                try {
+                    String name = nameField.getText();
+                    String description = descField.getText();
+                    double price = Double.parseDouble(priceField.getText());
+                    int stock = Integer.parseInt(stockField.getText());
+                    int currencyId = Integer.parseInt(currencyIdField.getText());
+        
+                    CallableStatement stmt = conn.prepareCall("{CALL add_product(?, ?, ?, ?, ?)}");
+                    stmt.setString(1, name);
+                    stmt.setString(2, description);
+                    stmt.setDouble(3, price);
+                    stmt.setInt(4, stock);
+                    stmt.setInt(5, currencyId);
+        
+                    stmt.execute();
+                    JOptionPane.showMessageDialog(this, "Product added successfully!");
+                    loadProductData();
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(this, "Error adding product: " + ex.getMessage());
+                }
+            }
+        });
+
+        deleteProductBtn.addActionListener(e -> {
+            int selectedRow = productTable.getSelectedRow();
+            if (selectedRow == -1) {
+                JOptionPane.showMessageDialog(this, "Please select a product to delete");
+                return;
+            }
+        
+            int productId = (int) tableModel.getValueAt(selectedRow, 0);
+            String productName = (String) tableModel.getValueAt(selectedRow, 1);
+        
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Are you sure you want to delete " + productName + "?",
+                    "Confirm Delete", JOptionPane.YES_NO_OPTION);
+        
+            if (confirm == JOptionPane.YES_OPTION) {
+                try {
+                    CallableStatement stmt = conn.prepareCall("{CALL delete_product(?)}");
+                    stmt.setInt(1, productId);
+                    stmt.execute();
+                    JOptionPane.showMessageDialog(this, "Product deleted successfully");
+                    loadProductData();
+                } catch (SQLException ex) {
+                    JOptionPane.showMessageDialog(this, "Error deleting product: " + ex.getMessage());
+                    ex.printStackTrace();
+                }
+            }
         });
 
         mainPanel.add(scrollPane, BorderLayout.CENTER);

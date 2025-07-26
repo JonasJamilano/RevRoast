@@ -1,7 +1,7 @@
 import java.awt.*;
 import java.awt.event.*;
-import javax.swing.*;
 import java.sql.*;
+import javax.swing.*;
 
 public class login extends JFrame {
     // Role constants
@@ -133,7 +133,9 @@ public class login extends JFrame {
 
                     dispose();
 
-                    if (ROLE_STAFF.equalsIgnoreCase(role)) {
+                    if ("admin".equalsIgnoreCase(role)) {
+                        new AdminHome(username);
+                    } else if (ROLE_STAFF.equalsIgnoreCase(role)) {
                         new StaffHome(username);
                     } else {
                         new home(username, userId);
