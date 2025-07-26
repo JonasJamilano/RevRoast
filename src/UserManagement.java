@@ -197,6 +197,7 @@ public class UserManagement extends JFrame {
     }
 
     // DELETE USER
+    // DELETE USER
     private void deleteUser() {
         int selectedRow = userTable.getSelectedRow();
         if (selectedRow == -1) {
@@ -205,22 +206,70 @@ public class UserManagement extends JFrame {
         }
 
         int userId = (int) tableModel.getValueAt(selectedRow, 0);
+        String userName = (String) tableModel.getValueAt(selectedRow, 1);
+        String userRole = (String) tableModel.getValueAt(selectedRow, 3);
+
+        // Special warning if trying to delete an admin
+        if ("admin".equals(userRole)) {
+            int adminCount = getAdminCount();
+            if (adminCount <= 1) { // This is the last admin
+                JOptionPane.showMessageDialog(this,
+                        "Cannot delete the last admin user. There must be at least one admin.",
+                        "Deletion Restricted", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+        }
+
         int confirm = JOptionPane.showConfirmDialog(this,
-                "Are you sure you want to delete this user?",
+                "Are you sure you want to delete user: " + userName + "?",
                 "Confirm Delete", JOptionPane.YES_NO_OPTION);
 
         if (confirm == JOptionPane.YES_OPTION) {
             try (Connection conn = DatabaseConnector.getConnection();
                  PreparedStatement stmt = conn.prepareStatement("DELETE FROM users WHERE user_id=?")) {
                 stmt.setInt(1, userId);
-                stmt.executeUpdate();
+                int affectedRows = stmt.executeUpdate();
 
-                JOptionPane.showMessageDialog(this, "User deleted successfully.");
-                loadUsers();
+                if (affectedRows > 0) {
+                    JOptionPane.showMessageDialog(this, "User deleted successfully.");
+                    loadUsers();
+                } else {
+                    JOptionPane.showMessageDialog(this, "No user was deleted.",
+                            "Deletion Failed", JOptionPane.INFORMATION_MESSAGE);
+                }
             } catch (SQLException e) {
-                JOptionPane.showMessageDialog(this, "Error deleting user: " + e.getMessage(),
-                        "Database Error", JOptionPane.ERROR_MESSAGE);
+                // Handle trigger-specific error messages
+                String errorMsg = e.getMessage();
+                if (errorMsg.contains("Cannot delete the last admin user")) {
+                    JOptionPane.showMessageDialog(this,
+                            "Cannot delete the last admin user. There must be at least one admin.",
+                            "Deletion Restricted", JOptionPane.WARNING_MESSAGE);
+                } else if (errorMsg.contains("User has associated orders")) {
+                    JOptionPane.showMessageDialog(this,
+                            "This user has associated orders. Please delete their orders first.",
+                            "Deletion Restricted", JOptionPane.WARNING_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Error deleting user: " + errorMsg,
+                            "Database Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         }
+    }
+
+    // Helper method to count admin users
+    private int getAdminCount() {
+        try (Connection conn = DatabaseConnector.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM users WHERE role = 'admin'")) {
+
+            if (rs.next()) {
+                return rs.getInt(1);
+            }
+        } catch (SQLException e) {
+            JOptionPane.showMessageDialog(this, "Error checking admin count: " + e.getMessage(),
+                    "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
+        return 0;
     }
 }
