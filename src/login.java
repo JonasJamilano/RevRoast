@@ -65,7 +65,7 @@ public class login extends JFrame {
         JPasswordField passwordField = new JPasswordField(15);
         panel.add(passwordField, gbc);
 
-        // Login Button (Now properly red on macOS)
+        // Login Button
         gbc.gridx = 0;
         gbc.gridy++;
         gbc.gridwidth = 2;
@@ -95,7 +95,7 @@ public class login extends JFrame {
         // Back Button
         gbc.gridy++;
         JButton backButton = createStyledButton("Back to Home");
-        backButton.setBackground(new Color(139, 69, 19)); // Brown color for back button
+        backButton.setBackground(new Color(139, 69, 19));
         backButton.addActionListener(e -> {
             new home();
             dispose();
@@ -114,7 +114,7 @@ public class login extends JFrame {
 
             try (Connection conn = DatabaseConnector.getConnection();
                  PreparedStatement stmt = conn.prepareStatement(
-                         "SELECT user_id, name, role, email FROM users WHERE email = ? AND password = ?")) {
+                         "SELECT user_id, name, role FROM users WHERE email = ? AND password = ?")) {
 
                 stmt.setString(1, email);
                 stmt.setString(2, password);
@@ -126,6 +126,9 @@ public class login extends JFrame {
                     String username = rs.getString("name");
                     String role = rs.getString("role");
 
+                    // Set the database role for this session
+                    setDatabaseRole(conn, role);
+
                     JOptionPane.showMessageDialog(this,
                             "Welcome back, " + username + "!",
                             "Login Successful",
@@ -133,12 +136,16 @@ public class login extends JFrame {
 
                     dispose();
 
-                    if ("admin".equalsIgnoreCase(role)) {
-                        new AdminHome(username);
-                    } else if (ROLE_STAFF.equalsIgnoreCase(role)) {
-                        new StaffHome(username);
-                    } else {
-                        new home(username, userId);
+                    // Redirect based on role
+                    switch (role.toLowerCase()) {
+                        case "admin":
+                            new AdminHome(username);
+                            break;
+                        case "staff":
+                            new StaffHome(username);
+                            break;
+                        default:
+                            new home(username, userId);
                     }
                 } else {
                     JOptionPane.showMessageDialog(this,
@@ -159,7 +166,26 @@ public class login extends JFrame {
         setVisible(true);
     }
 
-    // Custom button creator with macOS fixes
+    private void setDatabaseRole(Connection conn, String role) throws SQLException {
+        String dbRole = "revandroast_" + role.toLowerCase();
+        try (Statement stmt = conn.createStatement()) {
+            // First activate the role
+            stmt.execute("SET ROLE NONE");  // Clear any existing roles
+            stmt.execute("SET ROLE '" + dbRole + "'");
+
+            // Verify it worked
+            try (ResultSet rs = stmt.executeQuery("SELECT CURRENT_ROLE()")) {
+                if (rs.next()) {
+                    String currentRole = rs.getString(1);
+                    if (!currentRole.contains(dbRole)) {
+                        throw new SQLException("Failed to set role: " + dbRole);
+                    }
+                }
+            }
+        }
+    }
+
+    // Custom button creator (unchanged from your original)
     private JButton createStyledButton(String text) {
         JButton btn = new JButton(text) {
             @Override
@@ -175,19 +201,18 @@ public class login extends JFrame {
         };
         btn.setContentAreaFilled(false);
         btn.setOpaque(true);
-        btn.setBackground(new Color(252, 17, 17)); // Default red
+        btn.setBackground(new Color(252, 17, 17));
         btn.setForeground(Color.WHITE);
         btn.setFocusPainted(false);
         btn.setFont(new Font("Poppins", Font.BOLD, 14));
         btn.setBorder(BorderFactory.createEmptyBorder(10, 25, 10, 25));
 
-        // Hover effect
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) {
-                btn.setBackground(new Color(220, 0, 0)); // Darker red
+                btn.setBackground(new Color(220, 0, 0));
             }
             public void mouseExited(MouseEvent e) {
-                btn.setBackground(new Color(252, 17, 17)); // Original red
+                btn.setBackground(new Color(252, 17, 17));
             }
         });
 

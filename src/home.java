@@ -158,7 +158,7 @@ public class home extends JFrame {
     private String getCustomerName(int userId) {
         try (Connection conn = DatabaseConnector.getConnection();
              PreparedStatement stmt = conn.prepareStatement(
-                     "SELECT name FROM customers WHERE user_id = ?")) {
+                     "SELECT name FROM users WHERE user_id = ?")) {
 
             stmt.setInt(1, userId);
             ResultSet rs = stmt.executeQuery();

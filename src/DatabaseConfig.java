@@ -5,7 +5,7 @@ public class DatabaseConfig {
     private static final Properties properties = new Properties();
 
     static {
-        try (InputStream input = new FileInputStream("config.properties")) {
+        try (InputStream input = new FileInputStream("src/config.properties")) {
             properties.load(input);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load config.properties", e);

@@ -1,36 +1,34 @@
--- =====================
--- Admin User - Full Access
--- =====================
-GRANT ALL PRIVILEGES ON revandroast.* TO 'admin_user'@'localhost';
-FLUSH PRIVILEGES;
+/* ====================== */
+/*  ROLE CREATION         */
+/* ====================== */
+-- Creates three distinct access levels for the application
+CREATE ROLE IF NOT EXISTS
+  'revandroast_admin',    -- Full system administrator
+  'revandroast_staff',    -- Staff with modification rights
+  'revandroast_customer'; -- End customer access
 
--- =====================
--- Staff User - Manage orders/products, but not user roles
--- =====================
-GRANT SELECT, INSERT, UPDATE, DELETE ON revandroast.orders TO 'staff_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON revandroast.order_items TO 'staff_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE, DELETE ON revandroast.products TO 'staff_user'@'localhost';
-GRANT SELECT ON revandroast.users TO 'staff_user'@'localhost'; -- To look up customer names
+/* ====================== */
+/*  PRIVILEGE ASSIGNMENT  */
+/* ====================== */
+-- Administrator: Unlimited access to all database objects
+GRANT ALL PRIVILEGES ON revandroast.* TO 'revandroast_admin';
 
-FLUSH PRIVILEGES;
+-- Staff: Can view and modify data but not alter structure
+GRANT SELECT, INSERT, UPDATE ON revandroast.* TO 'revandroast_staff';
 
--- =====================
--- Customer User - Register, Login, Order, Checkout
--- =====================
+-- Customer: Restricted read-only access with order placement
+GRANT SELECT ON revandroast.products TO 'revandroast_customer';
+GRANT SELECT, INSERT ON revandroast.orders TO 'revandroast_customer';
 
--- Needed for registration/login
-GRANT SELECT (user_id, email, password, name, role, rpm_points) ON revandroast.users TO 'customer_user'@'localhost';
-GRANT INSERT (name, email, password, role) ON revandroast.users TO 'customer_user'@'localhost';
-GRANT UPDATE (rpm_points) ON revandroast.users TO 'customer_user'@'localhost';
+/* ====================== */
+/*  USER CONFIGURATION    */
+/* ====================== */
+-- Assign all application roles to the database user
+GRANT 'revandroast_admin', 'revandroast_staff', 'revandroast_customer'
+TO 'root'@'localhost';
 
--- Needed for ordering & checkout
-GRANT SELECT ON revandroast.products TO 'customer_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON revandroast.orders TO 'customer_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON revandroast.order_items TO 'customer_user'@'localhost';
-GRANT SELECT, INSERT, UPDATE ON revandroast.transaction_log TO 'customer_user'@'localhost';
-GRANT SELECT ON revandroast.currencies TO 'customer_user'@'localhost';
+-- Activate all roles by default for the application user
+SET DEFAULT ROLE ALL TO 'root'@'localhost';
 
--- Stored procedure (process_payment)
-GRANT EXECUTE ON PROCEDURE revandroast.process_payment TO 'customer_user'@'localhost';
-
+-- Apply privilege changes immediately
 FLUSH PRIVILEGES;
